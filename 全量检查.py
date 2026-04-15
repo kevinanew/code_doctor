@@ -38,7 +38,7 @@ def find_check_scripts():
     scripts = []
     
     for file in os.listdir(current_dir):
-        if file.endswith('.py') and not file.startswith('.') and not file.startswith('测试_'):
+        if file.endswith('.py') and not file.startswith('.') and not file.startswith('test_'):
             if file != os.path.basename(__file__):
                 scripts.append(os.path.join(current_dir, file))
     
