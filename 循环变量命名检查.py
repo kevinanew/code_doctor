@@ -87,6 +87,7 @@ def main():
         print("所有文件检查通过，未发现无意义的循环变量。")
     else:
         print(f"总计发现 {total_violations} 处不合规。")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
