@@ -1,5 +1,7 @@
 # Code Doctor
 
+[![Code Doctor Self Check](https://github.com/kevinanew/code_doctor/actions/workflows/self-check.yml/badge.svg)](https://github.com/kevinanew/code_doctor/actions/workflows/self-check.yml)
+
 Code Doctor 是一个纯 Python 实现的代码质量检查工具集，旨在确保代码库符合特定的开发标准和最佳实践。
 
 ## 项目特点
