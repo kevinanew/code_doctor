@@ -1,9 +1,10 @@
-# Agents Instructions
+# Agent 指令
 
-Please read `README.md` for the project standards, architecture, and development guidelines. All scripts in this project must follow the rules defined there, including:
+请阅读 `README.md` 以了解项目标准、架构和开发指南。本项目中的所有脚本必须遵循其中定义的规则，包括：
 
-- Zero external dependencies (Python Standard Library only).
-- PRD content included in the script's header docstring.
-- Uniform command-line interface (one directory argument).
-- Skipping hidden directories (starting with `.`).
-- Each script must have a corresponding test script.
+- 零外部依赖（仅限 Python 标准库）。
+- PRD 内容包含在脚本头部的 docstring 中。
+- 统一的命令行界面（仅接受一个目录参数）。
+- 排除以点（.）开头的隐藏目录。
+- 每个脚本必须配备相应的测试脚本。
+- 脚本文件名使用中文。
