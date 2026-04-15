@@ -67,11 +67,9 @@ def main():
         print(f"正在运行 {script_name}...")
         
         try:
-            # 使用 shell=True 直接调用 shell 运行脚本
-            command = f'python3 "{script}" "{target_dir}"'
+            # 运行脚本，将目标目录作为参数传递
             process = subprocess.run(
-                command,
-                shell=True,
+                ['python3', script, target_dir],
                 capture_output=True,
                 text=True
             )
