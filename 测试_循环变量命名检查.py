@@ -16,7 +16,7 @@ class TestMeaningfulLoopVariables(unittest.TestCase):
     def run_check(self, directory):
         # 运行脚本并获取输出
         result = subprocess.run(
-            ['python3', 'meaningful_loop_variables.py', directory],
+            ['python3', '循环变量命名检查.py', directory],
             capture_output=True,
             text=True
         )

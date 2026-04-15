@@ -18,10 +18,10 @@ Code Doctor 是一个纯 Python 实现的代码质量检查工具集，旨在确
 python <script_name>.py <target_directory>
 ```
 
-例如，运行 `meaningful_loop_variables.py`：
+例如，运行 `循环变量命名检查.py`：
 
 ```bash
-python meaningful_loop_variables.py /path/to/your/project
+python 循环变量命名检查.py /path/to/your/project
 ```
 
 ## 开发规范
