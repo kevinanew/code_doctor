@@ -6,6 +6,7 @@
 
 ## 2. 检查规则
 - **检测对象**：所有 Python 脚本文件（.py）。
+- **排除范围**：以点（.）开头的隐藏目录（如 .git, .venv 等）将被跳过。
 - **触发条件**：在 `for` 循环语句中，如果定义的迭代变量（target）是单个字母（A-Z, a-z），则视为不合规。
 - **例外情况**：下划线 `_` 常用于表示忽略该变量，不属于报错范围。
 - **报告内容**：文件路径、行号、以及具体的修改建议。
@@ -73,7 +74,10 @@ def main():
         sys.exit(1)
 
     total_violations = 0
-    for root, _, files in os.walk(target_dir):
+    for root, dirs, files in os.walk(target_dir):
+        # 排除以 . 开头的隐藏目录
+        dirs[:] = [d for d in dirs if not d.startswith('.')]
+        
         for file in files:
             if file.endswith('.py'):
                 file_path = os.path.join(root, file)

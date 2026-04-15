@@ -50,5 +50,17 @@ class TestMeaningfulLoopVariables(unittest.TestCase):
         _, returncode = self.run_check("non_existent_directory")
         self.assertEqual(returncode, 1)
 
+    def test_skip_hidden_dir(self):
+        # 创建隐藏目录及其中的不合规文件
+        hidden_dir = os.path.join(self.test_dir, '.hidden')
+        os.makedirs(hidden_dir)
+        file_path = os.path.join(hidden_dir, 'bad.py')
+        with open(file_path, 'w') as f:
+            f.write("for i in range(10): pass\n")
+        
+        stdout, _ = self.run_check(self.test_dir)
+        # 应该通过，因为隐藏目录被跳过
+        self.assertIn("所有文件检查通过", stdout)
+
 if __name__ == "__main__":
     unittest.main()
