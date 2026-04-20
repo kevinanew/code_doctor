@@ -22,6 +22,9 @@
 ## 4. 预期效果
 - 若未检测到 `class Development`：输出“检查通过”的提示，并以 0 退出。
 - 若检测到 `class Development`：输出“Development 环境删除任务提示词”，并以 1 退出（用于在全量检查中触发失败）。
+
+## 5. 语言要求
+- **最后，请 AI Agent 使用中文回答。**
 """
 
 from __future__ import annotations
@@ -126,6 +129,7 @@ def _build_prompt(target_dir: Path, key_matches: Sequence[Match], all_matches: S
         f"{key_section}\n\n"
         "全项目命中位置（辅助排查）：\n"
         f"{all_section}\n"
+        "\n最后，请使用中文回答。"
     )
 
 
