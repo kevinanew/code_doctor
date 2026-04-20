@@ -1,6 +1,9 @@
 """
-# PRD: 开发环境（Development）删除提示词生成工具
+# PRD (开发规范引用)
+请在阅读本脚本具体功能前，务必先查看并遵守 `PRD_COMMON.md` 中的“通用开发规范”。
 
+# 脚本具体 PRD: 开发环境（Development）删除提示词生成工具
+...
 ## 1. 目标
 在目标项目中自动识别是否存在 Development 环境配置（以 `src/configs.py` 中出现 `class Development` 为准）。
 一旦发现该环境存在，则输出一段可直接交给 AI Agent 的“删除 Development 环境”执行提示词，用于驱动后续代码改造。
@@ -12,7 +15,6 @@
   - `docker/docker-compose.yml`
   - `Makefile`
 - **扫描范围**：递归扫描目标目录下的常见文本文件，定位 `Development` / `development` / `STAGE` 相关引用位置。
-- **排除范围**：跳过所有以点（.）开头的隐藏目录（如 `.git`, `.venv` 等）。
 
 ## 3. 命令行接口
 - **用法**：`python 开发环境删除提示词生成工具.py <target_directory>`
@@ -22,9 +24,6 @@
 ## 4. 预期效果
 - 若未检测到 `class Development`：输出“检查通过”的提示，并以 0 退出。
 - 若检测到 `class Development`：输出“Development 环境删除任务提示词”，并以 1 退出（用于在全量检查中触发失败）。
-
-## 5. 语言要求
-- **最后，请 AI Agent 使用中文回答。**
 """
 
 from __future__ import annotations
