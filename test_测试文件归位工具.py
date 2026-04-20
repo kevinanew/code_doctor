@@ -53,9 +53,10 @@ class TestTestFileAlignment(unittest.TestCase):
         with open(os.path.join(self.other_dir, 'test_a.py'), 'w') as f:
             f.write("# test")
             
-        stdout, returncode = self.run_check("src")
-        self.assertIn("[归位检查]: 发现位置错误的测试文件", stdout)
-        self.assertIn("核实：在 './other/test_a.py' 发现了疑似测试", stdout)
+        # 关键修复：必须检查包含 src 和 other 的根目录，才能发现身处 other 的测试
+        stdout, returncode = self.run_check(".")
+        self.assertIn("[归位检查]: 发现位置错误的测试或配置文件", stdout)
+        self.assertIn("务必先告知修改原因", stdout)
         self.assertEqual(returncode, 1)
 
     def test_missing_test(self):
@@ -75,8 +76,8 @@ class TestTestFileAlignment(unittest.TestCase):
             f.write("# test")
             
         stdout, returncode = self.run_check("src", verbose=True)
-        self.assertIn("[*] 开始扫描全局测试库...", stdout)
-        self.assertIn("[*] 已建立全局测试库", stdout)
+        self.assertIn("[*] 开始扫描全局测试库 (范围: src)...", stdout)
+        self.assertIn("[*] 已建立全局库", stdout)
         self.assertIn("[*] 开始检查目录: src", stdout)
         self.assertIn("[检查]: src/a.py", stdout)
         self.assertIn("[OK] 测试文件已在理想位置", stdout)
@@ -95,6 +96,19 @@ class TestTestFileAlignment(unittest.TestCase):
         self.assertIn("跳过隐藏目录", stdout)
         self.assertIn("[归位检查]: 成功", stdout)
         self.assertEqual(returncode, 0)
+
+    def test_conftest_misplaced(self):
+        # 场景：conftest.py 位于 unittests 目录下
+        unittests_dir = os.path.join(self.root_dir, "unittests")
+        os.makedirs(unittests_dir)
+        conftest_path = os.path.join(unittests_dir, "conftest.py")
+        with open(conftest_path, 'w') as f:
+            f.write("# pytest config")
+            
+        stdout, returncode = self.run_check(".")
+        self.assertIn("发现 'conftest.py' 位于旧目录", stdout)
+        self.assertIn("修改须说明原因", stdout)
+        self.assertEqual(returncode, 1)
 
 if __name__ == "__main__":
     unittest.main()
