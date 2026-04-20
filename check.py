@@ -9,13 +9,13 @@
 - **排除范围**：
     - 脚本自身 (`check.py`)。
     - 所有以 `test_` 开头的测试脚本。
-    - 隐藏文件和目录（以 `.` 开头）。
+    - 隐藏文件 and 目录（以 `.` 开头）。
 - **环境依赖**：
     - **必须安装 Git**：脚本依赖 Git 进行状态监控。
     - **必须在仓库内运行**：目标路径或其父级必须是一个有效的 Git 仓库。
 - **执行逻辑**：
+    - **按顺序运行**：优先运行 `配置文件归位工具.py`，然后是 `测试文件归位工具.py`，其余工具按字母顺序运行。
     - 启动时校验 Git 环境，失败则立即退出。
-    - 遍历符合条件的脚本文件并运行。
     - 在每个脚本运行结束后，立即检查 Git 状态。
     - 如果发现文件变动，**必须立即停止后续检查**，并引导 AI Agent 进行规范的提交。
 
@@ -24,15 +24,17 @@
 - **参数**：`<target_directory>` 是需要递归检查的目录路径。
 
 ## 4. 预期效果
-- 自动发现所有检查工具。
+- 自动发现所有检查工具并按优先级排序执行。
 - 顺序运行并显示每个工具的完整输出。
-- 在所有检查完成后给出明确的总结报告。
-- **中断机制**：确保任何自动化修复引发的变动都能及时被发现并以 PR 形式提交。
+- 中断机制确保自动修复引发的变动能及时被发现。
 """
 
 import os
 import sys
 import subprocess
+
+# 优先级脚本列表（按顺序排列）
+PRIORITY_SCRIPTS = ["配置文件归位工具.py", "测试文件归位工具.py"]
 
 def ensure_git_environment():
     """
@@ -57,17 +59,32 @@ def ensure_git_environment():
 
 def find_check_scripts():
     """
-    寻找当前目录下所有的检查脚本（排除测试脚本和自身）。
+    寻找当前目录下所有的检查脚本，并按优先级排序。
     """
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    scripts = []
+    all_files = os.listdir(current_dir)
     
-    for file in os.listdir(current_dir):
-        if file.endswith('.py') and not file.startswith('.') and not file.startswith('test_'):
-            if file != 'check.py':
-                scripts.append(os.path.join(current_dir, file))
+    # 筛选出符合条件的脚本名
+    check_files = [
+        f for f in all_files 
+        if f.endswith('.py') and not f.startswith('.') and not f.startswith('test_') and f != 'check.py'
+    ]
     
-    return sorted(scripts)
+    # 按照优先级排序
+    priority = []
+    others = []
+    
+    # 首先提取优先级脚本
+    for p_script in PRIORITY_SCRIPTS:
+        if p_script in check_files:
+            priority.append(os.path.join(current_dir, p_script))
+            check_files.remove(p_script)
+            
+    # 其余脚本按字母顺序排序
+    for other_script in sorted(check_files):
+        others.append(os.path.join(current_dir, other_script))
+        
+    return priority + others
 
 def is_git_modified():
     """
