@@ -22,6 +22,3 @@ RUN ln -s /usr/local/bin/code-doctor/check.py /usr/local/bin/check-code
 
 # 设置环境变量，确保 Python 输出不会被缓冲
 ENV PYTHONUNBUFFERED=1
-
-# 默认保持在工作目录，启动后进入 Python 交互环境或执行用户命令
-CMD ["python3"]
