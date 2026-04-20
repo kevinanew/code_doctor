@@ -14,6 +14,7 @@
     - **必须安装 Git**：脚本依赖 Git 进行状态监控。
     - **必须在仓库内运行**：目标路径或其父级必须是一个有效的 Git 仓库。
 - **执行逻辑**：
+    - **参数解析**：支持 0 或 1 个参数。如果没有提供参数，默认检查当前目录。
     - **按顺序运行**：优先运行 `配置文件归位工具.py`，然后是 `测试文件归位工具.py`，其余工具按字母顺序运行。
     - 启动时校验 Git 环境，失败则立即退出。
     - **快速失败**：如果任何检查脚本运行失败（返回非零退出码），立即停止执行后续脚本并报错退出。
@@ -22,10 +23,11 @@
 - **结果输出**：打印每个检查工具的运行结果，全部完成后显示汇总统计信息。
 
 ## 3. 命令行接口
-- **用法**：`python check.py <target_directory>`
-- **参数**：`<target_directory>` 是需要递归检查的目录路径。
+- **用法**：`python check.py [target_directory]`
+- **参数**：`[target_directory]` 是需要递归检查的目录路径（可选，默认为当前目录 `.`）。
 
 ## 4. 预期效果
+
 - 自动发现所有检查工具并按优先级排序执行。
 - 顺序运行并显示每个工具的完整输出。
 - 中断机制确保自动修复引发的变动能及时被发现。
@@ -101,14 +103,16 @@ def is_git_modified():
     return bool(result.stdout.strip())
 
 def main():
-    if len(sys.argv) != 2:
-        print("用法: python check.py <target_directory>")
+    # 参数解析：支持可选的目标目录，默认为当前目录
+    if len(sys.argv) > 2:
+        print("用法: python check.py [target_directory]")
         sys.exit(1)
 
+    target_dir = sys.argv[1] if len(sys.argv) == 2 else "."
+    
     # [核心校验]: 确保 Git 环境可用
     ensure_git_environment()
 
-    target_dir = sys.argv[1]
     if not os.path.isdir(target_dir):
         print(f"错误: '{target_dir}' 不是一个有效的目录。")
         sys.exit(1)
