@@ -16,8 +16,10 @@
 - **执行逻辑**：
     - **按顺序运行**：优先运行 `配置文件归位工具.py`，然后是 `测试文件归位工具.py`，其余工具按字母顺序运行。
     - 启动时校验 Git 环境，失败则立即退出。
+    - **快速失败**：如果任何检查脚本运行失败（返回非零退出码），立即停止执行后续脚本并报错退出。
     - 在每个脚本运行结束后，立即检查 Git 状态。
     - 如果发现文件变动，**必须立即停止后续检查**，并引导 AI Agent 进行规范的提交。
+- **结果输出**：打印每个检查工具的运行结果，全部完成后显示汇总统计信息。
 
 ## 3. 命令行接口
 - **用法**：`python check.py <target_directory>`
@@ -135,8 +137,12 @@ def main():
             if process.stderr:
                 print(f"错误输出:\n{process.stderr}")
             
+            if process.returncode != 0:
+                print(f"错误: {script_name} 检查失败，停止后续检查。")
+                sys.exit(1)
+            
             # 记录结果状态
-            results.append((script_name, process.returncode == 0))
+            results.append((script_name, True))
             
             # [核心逻辑]: 检查 Git 状态变动
             if is_git_modified():
@@ -155,7 +161,7 @@ def main():
             
         except Exception as e:
             print(f"运行脚本 {script_name} 时发生错误: {e}")
-            results.append((script_name, False))
+            sys.exit(1)
 
     print("\n=== 全量检查总结报告 ===")
     all_passed = True
