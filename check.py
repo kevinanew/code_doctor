@@ -124,7 +124,7 @@ def main():
         print("未发现可用的检查脚本。")
         return
 
-    print(f"=== 开始全量检查，目标目录: {target_dir} ===\n")
+    print(f"=== 开始全量检查，目标目录: {os.path.abspath(target_dir)} ===\n")
     
     results = []
     for script in scripts:

@@ -22,3 +22,6 @@ RUN ln -s /usr/local/bin/code-doctor/check.py /usr/local/bin/check-code
 
 # 设置环境变量，确保 Python 输出不会被缓冲
 ENV PYTHONUNBUFFERED=1
+
+# 默认运行全量检查工具，检查当前工作目录
+CMD ["check-code"]
