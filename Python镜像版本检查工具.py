@@ -18,6 +18,7 @@
     - 文件路径、行号、以及当前使用的不合规镜像版本。
 - **AI Agent 动作指引**：
     - 使用 `replace` 工具将不合规的 `python-driver:3.13...` 替换为 `python-driver:3.13.13-20260422...`。
+    - 同步修改根目录下的 `.python-version` 文件，将其内容改为 `3.13.13`（对应镜像版本去掉时间戳）。
 
 ## 3. 命令行接口
 - **用法**：`python Python镜像版本检查工具.py <target_directory>`
@@ -110,8 +111,10 @@ def main():
         print("\n### AI Agent 动作指引 ###")
         print("1. 请针对上述列出的文件和行号，核实是否需要更新。")
         print(f"2. 使用 `replace` 工具将不合规的 `python-driver:3.13...` 替换为 `python-driver:{TARGET_VERSION}`。替换后复查一下，确保正确")
-        print("3. 确保保留原有的镜像后缀（如 -slim, -alpine）。")
+        print(f"3. 同步修改项目根目录下的 `.python-version` 文件为 `3.13.13` (即镜像版本去掉时间戳后缀)。")
+        print("4. 确保保留原有的镜像后缀（如 -slim, -alpine）。")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
