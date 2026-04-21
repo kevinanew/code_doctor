@@ -104,16 +104,6 @@ def is_git_modified():
     )
     return bool(result.stdout.strip())
 
-def get_current_branch():
-    """
-    获取当前的 Git 分支名称。
-    """
-    try:
-        result = subprocess.run(['git', 'branch', '--show-current'], capture_output=True, text=True)
-        return result.stdout.strip()
-    except:
-        return "unknown"
-
 def main():
     # 参数解析：支持可选的目标目录，默认为当前目录
     if len(sys.argv) > 2:
@@ -156,39 +146,27 @@ def main():
             if process.returncode != 0:
                 print(f"\n错误: {script_name} 检查失败，停止后续检查。")
                 print("-" * 40)
-                print("[AI Agent 动作指引 (强制要求)]:")
+                print("[AI Agent 动作指引]:")
                 print(f"1. **修复问题**：请根据上述错误输出修复 {script_name} 发现的问题。")
-
-                current_branch = get_current_branch()
-                if current_branch == "master":
-                    print("2. **严禁在 master 提交**：检测到你当前在 master 分支。")
-                    print("   请务必先执行 `git checkout -b <新分支名>` 切换到新分支再进行修复和提交。")
-                else:
-                    print(f"2. **提交 PR**：修复后请在当前分支 ({current_branch}) 提交并创建 PR。")
-
+                print("2. **严禁直接提交到 master**：本项目强制要求通过 PR 提交代码。")
+                print("   请务必先执行 `git checkout -b <新分支名>` 切换到新分支再进行提交和创建 PR。")
                 print("3. **禁止本地重跑**：不要在本地重新运行 check.py，直接提交以触发 CI 检查。")
                 print("最后，请使用中文回答。")
                 print("-" * 40)
                 sys.exit(1)
-
+            
             # 记录结果状态
             results.append((script_name, True))
-
+            
             # [核心逻辑]: 检查 Git 状态变动
             if is_git_modified():
                 print("\n" + "!" * 40)
                 print("[警告]: 检测到本地文件已被修改或自动修复。")
                 print("-" * 40)
-                print("[AI Agent 动作指引 (强制要求)]:")
+                print("[AI Agent 动作指引]:")
                 print("1. **停止执行**：全量检查已中断，因为检测到了文件变动。")
-
-                current_branch = get_current_branch()
-                if current_branch == "master":
-                    print("2. **严禁在 master 提交**：检测到你当前在 master 分支且有文件变动。")
-                    print("   请务必先执行 `git checkout -b <新分支名>` 转移改动到新分支，严禁直接在 master 提交。")
-                else:
-                    print(f"2. **提交 PR**：请在当前分支 ({current_branch}) 提交代码并直接创建 PR。")
-
+                print("2. **严禁直接提交到 master**：本项目强制要求通过 PR 提交代码。")
+                print("   请务必执行 `git checkout -b <新分支名>` 将改动转移到新分支后再进行提交和创建 PR。")
                 print("3. **禁止本地重跑**：不要在本地继续运行 check.py，直接提交以触发 CI 检查。")
                 print("最后，请使用中文回答。")
                 print("-" * 40)
