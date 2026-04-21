@@ -18,7 +18,10 @@
 - **参数**：`<target_directory>` 是需要检查的目录路径。
 - **默认行为**：如果未传入参数，则默认使用当前工作目录作为目标目录。
 
-## 4. 预期效果
+## 4. PR 规范
+- **中文 PR**：创建 Pull Request 时，**PR 标题和描述必须使用中文**。
+
+## 5. 预期效果
 - 若未检测到 `class Development`：输出“检查通过”的提示，并以 0 退出。
 - 若检测到 `class Development`：输出“Development 环境删除任务提示词”，并以 1 退出。
 """
@@ -54,7 +57,8 @@ def _build_prompt(target_dir: Path, configs_rel_path: str, line_no: int) -> str:
         "执行要求：\n"
         f"1) 修改 {configs_rel_path}：删除 `class Development` 及其相关代码（约第 {line_no} 行）。\n"
         "2) 确保项目中不再有对 `Development` 类的引用（若有，请适配为 testing 环境）。\n"
-        "3) 检查 `docker/docker-compose.yml`：如果其中 `centrifugo` 服务暴露了 `8999` 端口，请将其改为 `8000`。\n\n"
+        "3) 检查 `docker/docker-compose.yml`：如果其中 `centrifugo` 服务暴露了 `8999` 端口，请将其改为 `8000`。\n"
+        "4) **PR 规范**：创建 Pull Request 时，**PR 标题和描述必须使用中文**。\n\n"
         "最后，请使用中文回答。"
     )
 

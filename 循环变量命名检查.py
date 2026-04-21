@@ -13,7 +13,10 @@
 - **例外情况**：下划线 `_` 常用于表示忽略该变量，不属于报错范围。
 - **报告内容**：文件路径、行号、以及具体的修改建议。
 
-## 3. 命令行接口
+## 3. PR 规范
+- **中文 PR**：创建 Pull Request 时，**PR 标题和描述必须使用中文**。
+
+## 4. 命令行接口
 - **用法**：`python meaningful_loop_variables.py <target_directory>`
 - **参数**：`<target_directory>` 是需要递归检查的目录路径。
 
@@ -89,6 +92,10 @@ def main():
         print("所有文件检查通过，未发现无意义的循环变量。")
     else:
         print(f"总计发现 {total_violations} 处不合规。")
+        print("\n[AI Agent 动作指引]:")
+        print("1. **修复问题**：请根据上述提示将单字母变量修改为具有描述性的名称。")
+        print("2. **PR 规范**：创建 Pull Request 时，**PR 标题和描述必须使用中文**。")
+        print("\n最后，请使用中文回答。")
         sys.exit(1)
 
 if __name__ == "__main__":
