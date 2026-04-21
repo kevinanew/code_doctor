@@ -5,6 +5,7 @@
 # 脚本具体 PRD: Python 镜像版本检查工具
 ## 1. 目标
 确保项目中使用的 `python-driver:3.13` 镜像版本统一为官方指定的修复版本 `3.13.13-20260422`。
+替换后需要复查,确保正确
 
 ## 2. 检查规则
 - **检测范围**（限定范围）：
@@ -108,7 +109,7 @@ def main():
         print(f"[镜像版本检查]: 发现 {total_violations} 处不合规的镜像版本。")
         print("\n### AI Agent 动作指引 ###")
         print("1. 请针对上述列出的文件和行号，核实是否需要更新。")
-        print(f"2. 使用 `replace` 工具将不合规的 `python-driver:3.13...` 替换为 `python-driver:{TARGET_VERSION}...`。")
+        print(f"2. 使用 `replace` 工具将不合规的 `python-driver:3.13...` 替换为 `python-driver:{TARGET_VERSION}`。替换后复查一下，确保正确")
         print("3. 确保保留原有的镜像后缀（如 -slim, -alpine）。")
         sys.exit(1)
 
