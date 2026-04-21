@@ -6,7 +6,7 @@
 
 ## 1. 目标
 在目标项目中自动识别是否存在 Development 环境配置（仅以 `src/configs.py` 中出现 `class Development` 为准）。
-一旦发现该环境存在，则输出一段可直接交给 AI Agent 的“删除 Development 环境”执行提示词，用于驱动后续代码改造。
+一旦发现该环境存在，则输出一段可直接交给 AI Agent 的“删除 Development 环境”执行提示词，用于驱动后续代码改造。提示词中还应包含对 `centrifugo` 端口的标准化建议。
 
 ## 2. 检查规则
 - **触发条件**：`<target_directory>/src/configs.py` 中存在 `class Development`。
@@ -50,10 +50,11 @@ def _build_prompt(target_dir: Path, configs_rel_path: str, line_no: int) -> str:
     return (
         "你是资深 Python 工程师。全程使用中文沟通。\n\n"
         f"目标项目目录：{target_dir}\n"
-        "目标：删除 Development 环境配置。\n\n"
+        "目标：删除 Development 环境配置并标准化配置。\n\n"
         "执行要求：\n"
         f"1) 修改 {configs_rel_path}：删除 `class Development` 及其相关代码（约第 {line_no} 行）。\n"
-        "2) 确保项目中不再有对 `Development` 类的引用（若有，请适配为 testing 环境）。\n\n"
+        "2) 确保项目中不再有对 `Development` 类的引用（若有，请适配为 testing 环境）。\n"
+        "3) 检查 `docker/docker-compose.yml`：如果其中 `centrifugo` 服务暴露了 `8999` 端口，请将其改为 `8000`。\n\n"
         "最后，请使用中文回答。"
     )
 

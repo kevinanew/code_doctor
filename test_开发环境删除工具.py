@@ -29,24 +29,28 @@ class TestDevEnvDeleteTool(unittest.TestCase):
         return result.stdout, result.returncode
 
     def test_pass_when_no_development(self):
-        self._write("Makefile", "run:\n\techo STAGE=testing\n")
+        # 不存在 src/configs.py
+        stdout, returncode = self.run_tool(self.test_dir)
+        self.assertEqual(returncode, 0)
+        self.assertIn("检查通过", stdout)
+
+    def test_pass_when_no_class_development(self):
+        # 存在 src/configs.py 但没有 class Development
+        self._write("src/configs.py", "class Production:\n    pass\n")
         stdout, returncode = self.run_tool(self.test_dir)
         self.assertEqual(returncode, 0)
         self.assertIn("检查通过", stdout)
 
     def test_reports_development_hits_and_fails(self):
-        self._write("Makefile", "run:\n\techo STAGE=development\n")
-        self._write("docker/docker-compose.yml", "environment:\n  STAGE: development\n")
-        self._write("src/config.py", "STAGE = 'development'\n")
-        self._write("src/sdk/sdk_client.py", "if stage == 'development':\n    pass\n")
+        # 3行内容，class Development 在第3行
+        self._write("src/configs.py", "class Production:\n    pass\nclass Development:\n    pass\n")
 
         stdout, returncode = self.run_tool(self.test_dir)
         self.assertEqual(returncode, 1)
-        self.assertIn("目标：删除 Development（development）环境配置", stdout)
-        self.assertIn("Makefile:2", stdout)
-        self.assertIn("docker/docker-compose.yml:2", stdout)
-        self.assertIn("src/config.py:1", stdout)
-        self.assertIn("src/sdk/sdk_client.py:1", stdout)
+        self.assertIn("目标：删除 Development 环境配置并标准化配置", stdout)
+        self.assertIn("src/configs.py：删除 `class Development` 及其相关代码（约第 3 行）", stdout)
+        # 验证新增加的 centrifugo 端口要求
+        self.assertIn("检查 `docker/docker-compose.yml`：如果其中 `centrifugo` 服务暴露了 `8999` 端口，请将其改为 `8000`。", stdout)
 
     def test_invalid_directory(self):
         stdout, returncode = self.run_tool(os.path.join(self.test_dir, "not_exist"))
@@ -54,7 +58,7 @@ class TestDevEnvDeleteTool(unittest.TestCase):
         self.assertIn("不是一个有效的目录", stdout)
 
     def test_default_to_cwd_when_no_args(self):
-        self._write("src/config.py", "STAGE = 'development'\n")
+        self._write("src/configs.py", "class Development:\n    pass\n")
         result = subprocess.run(
             ["python3", self.script_path],
             capture_output=True,
@@ -62,9 +66,9 @@ class TestDevEnvDeleteTool(unittest.TestCase):
             cwd=self.test_dir,
         )
         self.assertEqual(result.returncode, 1)
-        self.assertIn("src/config.py:1", result.stdout)
+        # 验证包含基本的目标词
+        self.assertIn("目标：删除 Development 环境配置", result.stdout)
 
 
 if __name__ == "__main__":
     unittest.main()
-
