@@ -4,6 +4,11 @@ FROM python:3.13-slim
 # 设置工作目录
 WORKDIR /workspace
 
+# 安装必要的系统工具：git
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
 # 从官方 uv 镜像中拷贝二进制文件
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uv/bin/uv
 ENV PATH="/uv/bin:${PATH}"
