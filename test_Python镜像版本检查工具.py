@@ -60,5 +60,14 @@ class TestPythonImageVersionCheck(unittest.TestCase):
         self.assertEqual(result.returncode, 0)
         self.assertIn("成功", result.stdout)
 
+    def test_timestamp_removal(self):
+        """测试建议修改时移除旧的时间戳"""
+        self.create_file("Dockerfile", "FROM python-driver:3.13-20251127-slim\n")
+        result = self.run_check()
+        self.assertEqual(result.returncode, 1)
+        # 验证建议修改的标签是否去掉了旧时间戳且保留了 -slim
+        self.assertIn("建议修改为：'python-driver:3.13.13-20260422-slim'", result.stdout)
+        self.assertNotIn("-20251127", result.stdout.split("建议修改为：")[1])
+
 if __name__ == "__main__":
     unittest.main()

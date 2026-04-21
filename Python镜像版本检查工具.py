@@ -18,6 +18,7 @@
     - 文件路径、行号、以及当前使用的不合规镜像版本。
 - **AI Agent 动作指引**：
     - 使用 `replace` 工具将不合规的 `python-driver:3.13...` 替换为 `python-driver:3.13.13-20260422...`。
+    - 注意：替换时需**移除旧的版本号和旧的时间戳**（如 `-20251127`），但需**保留原有镜像后缀**（如 `-slim`, `-alpine`）。
     - 同步修改根目录下的 `.python-version` 文件，将其内容改为 `3.13.13`（对应镜像版本去掉时间戳）。
 
 ## 3. 命令行接口
@@ -63,10 +64,15 @@ def check_file(file_path):
         if violations:
             print(f"[{file_path}] 发现不合规的 Python 镜像版本：")
             for lineno, full_tag, suffix in violations:
-                version_part_match = re.match(r'^(\.[0-9.]+)?(.*)', suffix)
-                original_suffix_after_version = version_part_match.group(2) if version_part_match else ""
-
-                suggested_tag = f"{TARGET_IMAGE_NAME}:{TARGET_VERSION}{original_suffix_after_version}"
+                # 移除旧的版本号（如 .1, .13.1）和旧的时间戳（如 -20251127）
+                # 只保留之后的后缀（如 -slim, -alpine）
+                # 匹配模式：.数字 或 -20xxxxxx
+                version_and_ts_pattern = re.compile(r'^(\.[0-9]+|-20[0-9]{6})*')
+                version_and_ts_match = version_and_ts_pattern.match(suffix)
+                
+                clean_suffix = suffix[version_and_ts_match.end():] if version_and_ts_match else suffix
+                suggested_tag = f"{TARGET_IMAGE_NAME}:{TARGET_VERSION}{clean_suffix}"
+                
                 print(f"  第 {lineno} 行：使用了 '{full_tag}'。")
                 print(f"  建议修改为：'{suggested_tag}'")
             print()
@@ -110,9 +116,9 @@ def main():
         print(f"[镜像版本检查]: 发现 {total_violations} 处不合规的镜像版本。")
         print("\n### AI Agent 动作指引 ###")
         print("1. 请针对上述列出的文件和行号，核实是否需要更新。")
-        print(f"2. 使用 `replace` 工具将不合规的 `python-driver:3.13...` 替换为 `python-driver:{TARGET_VERSION}`。替换后复查一下，确保正确")
+        print(f"2. 使用 `replace` 工具将不合规的 `python-driver:3.13...` 替换为 `python-driver:{TARGET_VERSION}`。")
+        print("   注意：需移除旧的版本号和旧的时间戳，但保留 `-slim` 等后缀。替换后请复查。")
         print(f"3. 同步修改项目根目录下的 `.python-version` 文件为 `3.13.13` (即镜像版本去掉时间戳后缀)。")
-        print("4. 确保保留原有的镜像后缀（如 -slim, -alpine）。")
         sys.exit(1)
 
 
