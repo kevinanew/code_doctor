@@ -53,12 +53,20 @@ class TestPythonImageVersionCheck(unittest.TestCase):
         self.assertEqual(result.returncode, 0) # 应该忽略这些位置
 
     def test_correct_versions(self):
-        """测试正确版本的情况"""
+        """测试正确版本的情况（包含 main.yml 的特殊版本）"""
         self.create_file("Dockerfile", "FROM python-driver:3.13.13-20260422-slim\n")
         self.create_file(".woodpecker/ci.yaml", "image: python-driver:3.13.13-20260422\n")
+        self.create_file(".woodpecker/main.yml", "image: python-driver:3.13.13-20260423\n")
         result = self.run_check()
         self.assertEqual(result.returncode, 0)
         self.assertIn("成功", result.stdout)
+
+    def test_non_compliant_main_yml(self):
+        """测试 .woodpecker/main.yml 使用了错误的版本"""
+        self.create_file(".woodpecker/main.yml", "image: python-driver:3.13.13-20260422\n")
+        result = self.run_check()
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("建议修改为：'python-driver:3.13.13-20260423'", result.stdout)
 
     def test_timestamp_removal(self):
         """测试建议修改时移除旧的时间戳"""

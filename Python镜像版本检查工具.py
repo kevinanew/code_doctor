@@ -5,6 +5,7 @@
 # 脚本具体 PRD: Python 镜像版本检查工具
 ## 1. 目标
 确保项目中使用的 `python-driver:3.13` 镜像版本统一为官方指定的修复版本 `3.13.13-20260422`。
+例外情况：`.woodpecker/main.yml` 使用 `3.13.13-20260423`。
 替换后需要复查,确保正确
 
 ## 2. 检查规则
@@ -13,11 +14,13 @@
     2. 目标目录根下的 `.woodpecker/` 目录及其子目录中的所有文件。
 - **触发条件**：
     - 匹配模式：镜像名包含 `python-driver:3.13`。
-    - 不合规条件：版本号部分不是 `3.13.13-20260422`。
+    - 不合规条件：
+        - 对于 `.woodpecker/main.yml`：版本号部分不是 `3.13.13-20260423`。
+        - 对于其他文件：版本号部分不是 `3.13.13-20260422`。
 - **报告内容**：
     - 文件路径、行号、以及当前使用的不合规镜像版本。
 - **AI Agent 动作指引**：
-    - 使用 `replace` 工具将不合规的 `python-driver:3.13...` 替换为 `python-driver:3.13.13-20260422...`。
+    - 使用 `replace` 工具将不合规的 `python-driver:3.13...` 替换为目标版本（见上文例外说明）。
     - 注意：替换时需**移除旧的版本号和旧的时间戳**（如 `-20251127`），但需**保留原有镜像后缀**（如 `-slim`, `-alpine`）。
     - 同步修改根目录下的 `.python-version` 文件，将其内容改为 `3.13.13`（对应镜像版本去掉时间戳）。
     - 创建 Pull Request 时，**PR 标题和描述必须使用中文**。
@@ -58,13 +61,23 @@ def check_file(file_path):
                     full_tag = match.group(0) # e.g. python-driver:3.13.1-slim
                     suffix = match.group(1)   # e.g. .1-slim
 
-                    # 检查 suffix 是否以 .13-20260422 开头
-                    if not suffix.startswith(".13-20260422"):
+                    # 检查 suffix 是否符合版本要求
+                    # 特殊情况：.woodpecker/main.yml 允许使用 3.13.13-20260423
+                    expected_suffix = ".13-20260422"
+                    if file_path.endswith(".woodpecker/main.yml"):
+                        expected_suffix = ".13-20260423"
+
+                    if not suffix.startswith(expected_suffix):
                         violations.append((lineno, full_tag, suffix))
 
         if violations:
             print(f"[{file_path}] 发现不合规的 Python 镜像版本：")
             for lineno, full_tag, suffix in violations:
+                # 确定建议的版本号
+                suggested_version = TARGET_VERSION
+                if file_path.endswith(".woodpecker/main.yml"):
+                    suggested_version = "3.13.13-20260423"
+
                 # 移除旧的版本号（如 .1, .13.1）和旧的时间戳（如 -20251127）
                 # 只保留之后的后缀（如 -slim, -alpine）
                 # 匹配模式：.数字 或 -20xxxxxx
@@ -72,7 +85,7 @@ def check_file(file_path):
                 version_and_ts_match = version_and_ts_pattern.match(suffix)
                 
                 clean_suffix = suffix[version_and_ts_match.end():] if version_and_ts_match else suffix
-                suggested_tag = f"{TARGET_IMAGE_NAME}:{TARGET_VERSION}{clean_suffix}"
+                suggested_tag = f"{TARGET_IMAGE_NAME}:{suggested_version}{clean_suffix}"
                 
                 print(f"  第 {lineno} 行：使用了 '{full_tag}'。")
                 print(f"  建议修改为：'{suggested_tag}'")
