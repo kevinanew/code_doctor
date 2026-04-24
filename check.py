@@ -176,17 +176,7 @@ def main():
             print(f"运行脚本 {script_name} 时发生错误: {e}")
             sys.exit(1)
 
-    print("\n=== 全量检查总结报告 ===")
-    all_passed = True
-    for name, success in results:
-        status = "通过" if success else "失败"
-        print(f"  - {name}: {status}")
-        if not success:
-            all_passed = False
-    
-    if all_passed:
-        print("\n恭喜！所有代码检查项均已通过。")
-    else:
+    if not all(success for _, success in results):
         print("\n注意：部分代码检查项未通过，请根据上述详细报告进行修改。")
         sys.exit(1)
 
