@@ -4,8 +4,8 @@
 
 # 脚本具体 PRD: Python 镜像版本检查工具
 ## 1. 目标
-确保项目中使用的 `python-driver:3.13` 镜像版本统一为官方指定的修复版本 `3.13.13-20260422`。
-例外情况：`.woodpecker/main.yml` 使用 `3.13.13-20260423`。
+确保项目中的 `.woodpecker/` 目录下的 CI lint 镜像统一使用官方指定的修复版本 `3.13.13-20260423-lint`。
+项目根目录下的 `Dockerfile` 镜像统一使用官方指定的修复版本 `3.13.13-20260422`。
 替换后需要复查,确保正确
 
 ## 2. 检查规则
@@ -14,9 +14,9 @@
     2. 目标目录根下的 `.woodpecker/` 目录及其子目录中的所有文件。
 - **触发条件**：
     - 匹配模式：镜像名包含 `python-driver:3.13`。
-    - 不合规条件：
-        - 对于 `.woodpecker/main.yml`：版本号部分不是 `3.13.13-20260423`。
-        - 对于其他文件：版本号部分不是 `3.13.13-20260422`。
+    - 判定规则：
+        - 对于 `Dockerfile`：版本号部分必须是 `3.13.13-20260422`。
+        - 对于其他文件（如 `.woodpecker/` 下的 CI 文件）：版本号部分必须是 `3.13.13-20260423-lint`。
 - **报告内容**：
     - 文件路径、行号、以及当前使用的不合规镜像版本。
 - **AI Agent 动作指引**：
@@ -43,7 +43,7 @@ import sys
 # 匹配 python-driver:3.13，后面可以跟可选所在的 .数字 或 -后缀
 PYTHON_313_PATTERN = re.compile(r'python-driver:3\.13([0-9a-zA-Z.-]*)')
 TARGET_IMAGE_NAME = "python-driver"
-TARGET_VERSION = "3.13.13-20260422"
+TARGET_VERSION = "3.13.13-20260423-lint"
 
 def check_file(file_path):
     """
@@ -62,10 +62,10 @@ def check_file(file_path):
                     suffix = match.group(1)   # e.g. .1-slim
 
                     # 检查 suffix 是否符合版本要求
-                    # 特殊情况：.woodpecker/main.yml 允许使用 3.13.13-20260423
-                    expected_suffix = ".13-20260422"
-                    if file_path.endswith(".woodpecker/main.yml"):
-                        expected_suffix = ".13-20260423"
+                    # 特殊情况：Dockerfile 使用 3.13.13-20260422
+                    expected_suffix = ".13-20260423-lint"
+                    if file_path.endswith("Dockerfile"):
+                        expected_suffix = ".13-20260422"
 
                     if not suffix.startswith(expected_suffix):
                         violations.append((lineno, full_tag, suffix))
@@ -75,13 +75,13 @@ def check_file(file_path):
             for lineno, full_tag, suffix in violations:
                 # 确定建议的版本号
                 suggested_version = TARGET_VERSION
-                if file_path.endswith(".woodpecker/main.yml"):
-                    suggested_version = "3.13.13-20260423"
+                if file_path.endswith("Dockerfile"):
+                    suggested_version = "3.13.13-20260422"
 
-                # 移除旧的版本号（如 .1, .13.1）和旧的时间戳（如 -20251127）
+                # 移除旧的版本号（如 .1, .13.1）和旧的时间戳（如 -20251127）以及 -lint
                 # 只保留之后的后缀（如 -slim, -alpine）
-                # 匹配模式：.数字 或 -20xxxxxx
-                version_and_ts_pattern = re.compile(r'^(\.[0-9]+|-20[0-9]{6})*')
+                # 匹配模式：.数字 或 -20xxxxxx 或 -lint
+                version_and_ts_pattern = re.compile(r'^(\.[0-9]+|-20[0-9]{6}|-lint)*')
                 version_and_ts_match = version_and_ts_pattern.match(suffix)
                 
                 clean_suffix = suffix[version_and_ts_match.end():] if version_and_ts_match else suffix
