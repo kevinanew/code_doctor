@@ -43,9 +43,9 @@ import subprocess
 # 优先级脚本列表（按顺序排列）
 PRIORITY_SCRIPTS = ["开发环境删除工具.py", "配置文件归位工具.py", "测试文件归位工具.py"]
 
-def ensure_git_environment():
+def ensure_git_environment(target_dir):
     """
-    确保系统安装了 Git 且当前目录处于 Git 仓库中。
+    确保系统安装了 Git 且目标目录处于 Git 仓库中。
     """
     try:
         # 1. 检查 git 是否安装
@@ -55,10 +55,14 @@ def ensure_git_environment():
         sys.exit(1)
 
     try:
-        # 2. 检查当前是否处于 Git 仓库中
-        result = subprocess.run(['git', 'rev-parse', '--is-inside-work-tree'], capture_output=True, text=True)
+        # 2. 检查目标目录是否处于 Git 仓库中
+        result = subprocess.run(
+            ['git', '-C', target_dir, 'rev-parse', '--is-inside-work-tree'],
+            capture_output=True,
+            text=True
+        )
         if result.returncode != 0 or "true" not in result.stdout.lower():
-            print("[错误]: 当前目录不是一个有效的 Git 仓库。全量检查工具必须在 Git 仓库内运行。")
+            print(f"[错误]: 目录 '{target_dir}' 不是一个有效的 Git 仓库。全量检查工具必须在 Git 仓库内运行。")
             sys.exit(1)
     except Exception as e:
         print(f"[错误]: 校验 Git 仓库状态时发生异常: {e}")
@@ -93,13 +97,13 @@ def find_check_scripts():
         
     return priority + others
 
-def is_git_modified():
+def is_git_modified(target_dir):
     """
     检查 Git 工作区是否有变动（已修改或已暂存的文件）。
     """
     # --porcelain 产生易于解析的输出，如果有变动则输出非空
     result = subprocess.run(
-        ['git', 'status', '--porcelain'],
+        ['git', '-C', target_dir, 'status', '--porcelain'],
         capture_output=True,
         text=True
     )
@@ -114,7 +118,7 @@ def main():
     target_dir = sys.argv[1] if len(sys.argv) == 2 else "."
     
     # [核心校验]: 确保 Git 环境可用
-    ensure_git_environment()
+    ensure_git_environment(target_dir)
 
     if not os.path.isdir(target_dir):
         print(f"错误: '{target_dir}' 不是一个有效的目录。")
@@ -158,7 +162,7 @@ def main():
             results.append((script_name, True))
             
             # [核心逻辑]: 检查 Git 状态变动
-            if is_git_modified():
+            if is_git_modified(target_dir):
                 print("\n" + "!" * 40)
                 print("[警告]: 检测到本地文件已被修改或自动修复。")
                 print("-" * 40)

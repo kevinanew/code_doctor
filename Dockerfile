@@ -14,11 +14,11 @@ COPY --from=ghcr.io/astral-sh/uv:latest /uv /uv/bin/uv
 ENV PATH="/uv/bin:${PATH}"
 
 # 将 Code Doctor 脚本拷贝到固定位置
-RUN mkdir -p /usr/local/bin/code-doctor
-COPY . /usr/local/bin/code-doctor/
+WORKDIR /app
+COPY . .
 
 # 设置环境变量，确保 Python 输出不会被缓冲
 ENV PYTHONUNBUFFERED=1
 
 # 默认运行全量检查工具，检查当前工作目录
-CMD ["uv", "run", "/usr/local/bin/code-doctor/check.py"]
+CMD ["uv", "run", "check.py", "/workspace"]
