@@ -88,7 +88,7 @@ def check_file(file_path):
                 suggested_tag = f"{TARGET_IMAGE_NAME}:{suggested_version}{clean_suffix}"
                 
                 print(f"  第 {lineno} 行：使用了 '{full_tag}'。")
-                print(f"  建议修改为：'{suggested_tag}'")
+                print(f"  需要修改为：'{suggested_tag}'")
             print()
             return len(violations)
 

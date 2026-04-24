@@ -66,7 +66,7 @@ class TestPythonImageVersionCheck(unittest.TestCase):
         self.create_file(".woodpecker/main.yml", "image: python-driver:3.13.13-20260422\n")
         result = self.run_check()
         self.assertEqual(result.returncode, 1)
-        self.assertIn("建议修改为：'python-driver:3.13.13-20260423'", result.stdout)
+        self.assertIn("需要修改为：'python-driver:3.13.13-20260423'", result.stdout)
 
     def test_timestamp_removal(self):
         """测试建议修改时移除旧的时间戳"""
@@ -74,8 +74,8 @@ class TestPythonImageVersionCheck(unittest.TestCase):
         result = self.run_check()
         self.assertEqual(result.returncode, 1)
         # 验证建议修改的标签是否去掉了旧时间戳且保留了 -slim
-        self.assertIn("建议修改为：'python-driver:3.13.13-20260422-slim'", result.stdout)
-        self.assertNotIn("-20251127", result.stdout.split("建议修改为：")[1])
+        self.assertIn("需要修改为：'python-driver:3.13.13-20260422-slim'", result.stdout)
+        self.assertNotIn("-20251127", result.stdout.split("需要修改为：")[1])
 
 if __name__ == "__main__":
     unittest.main()
