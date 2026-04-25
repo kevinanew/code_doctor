@@ -43,14 +43,22 @@ class TestDevEnvDeleteTool(unittest.TestCase):
 
     def test_reports_development_hits_and_fails(self):
         # 3行内容，class Development 在第3行
-        self._write("src/configs.py", "class Production:\n    pass\nclass Development:\n    pass\n")
+        self._write(
+            "src/configs.py",
+            "class Production:\n    pass\nclass Development:\n    pass\n",
+        )
 
         stdout, returncode = self.run_tool(self.test_dir)
         self.assertEqual(returncode, 1)
         self.assertIn("目标：删除 Development 环境配置并标准化配置", stdout)
-        self.assertIn("src/configs.py：删除 `class Development` 及其相关代码（约第 3 行）", stdout)
+        self.assertIn(
+            "src/configs.py：删除 `class Development` 及其相关代码（约第 3 行）", stdout
+        )
         # 验证新增加的 centrifugo 端口要求
-        self.assertIn("检查 `docker/docker-compose.yml`：如果其中 `centrifugo` 服务暴露了 `8999` 端口，请将其改为 `8000`。", stdout)
+        self.assertIn(
+            "检查 `docker/docker-compose.yml`：如果其中 `centrifugo` 服务暴露了 `8999` 端口，请将其改为 `8000`。",
+            stdout,
+        )
 
     def test_invalid_directory(self):
         stdout, returncode = self.run_tool(os.path.join(self.test_dir, "not_exist"))

@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import unittest
 
+
 class TestPythonImageVersionCheck(unittest.TestCase):
     def setUp(self):
         # 创建临时目录
@@ -25,9 +26,7 @@ class TestPythonImageVersionCheck(unittest.TestCase):
         if target_path is None:
             target_path = self.test_dir
         result = subprocess.run(
-            ["python", self.script_path, target_path],
-            capture_output=True,
-            text=True
+            ["python", self.script_path, target_path], capture_output=True, text=True
         )
         return result
 
@@ -45,20 +44,26 @@ class TestPythonImageVersionCheck(unittest.TestCase):
         result = self.run_check()
         self.assertEqual(result.returncode, 1)
         self.assertIn(".woodpecker/test.yml", result.stdout)
-        self.assertIn("需要修改为：'python-driver:3.13.13-20260423-lint'", result.stdout)
+        self.assertIn(
+            "需要修改为：'python-driver:3.13.13-20260423-lint'", result.stdout
+        )
 
     def test_ignore_other_files(self):
         """测试忽略其他目录的文件"""
         self.create_file("src/Dockerfile", "FROM python-driver:3.13\n")
         self.create_file("other.txt", "python-driver:3.13\n")
         result = self.run_check()
-        self.assertEqual(result.returncode, 0) # 应该忽略这些位置
+        self.assertEqual(result.returncode, 0)  # 应该忽略这些位置
 
     def test_correct_versions(self):
         """测试正确版本的情况"""
         self.create_file("Dockerfile", "FROM python-driver:3.13.13-20260422-slim\n")
-        self.create_file(".woodpecker/ci.yaml", "image: python-driver:3.13.13-20260423-lint\n")
-        self.create_file(".woodpecker/main.yml", "image: python-driver:3.13.13-20260423-lint\n")
+        self.create_file(
+            ".woodpecker/ci.yaml", "image: python-driver:3.13.13-20260423-lint\n"
+        )
+        self.create_file(
+            ".woodpecker/main.yml", "image: python-driver:3.13.13-20260423-lint\n"
+        )
         result = self.run_check()
         self.assertEqual(result.returncode, 0)
         self.assertIn("成功", result.stdout)
@@ -76,8 +81,11 @@ class TestPythonImageVersionCheck(unittest.TestCase):
         result = self.run_check()
         self.assertEqual(result.returncode, 1)
         # 验证建议修改的标签是否去掉了旧时间戳且保留了 -slim
-        self.assertIn("需要修改为：'python-driver:3.13.13-20260422-slim'", result.stdout)
+        self.assertIn(
+            "需要修改为：'python-driver:3.13.13-20260422-slim'", result.stdout
+        )
         self.assertNotIn("-20251127", result.stdout.split("需要修改为：")[1])
+
 
 if __name__ == "__main__":
     unittest.main()

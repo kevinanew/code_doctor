@@ -30,14 +30,15 @@ import ast
 import os
 import sys
 
+
 def check_file(file_path):
     """
     检查单个文件中的 for 循环变量。
     """
     try:
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(file_path, "r", encoding="utf-8") as f:
             content = f.read()
-        
+
         tree = ast.parse(content)
         violations = []
 
@@ -46,20 +47,22 @@ def check_file(file_path):
                 # 检查 for 循环的目标变量
                 if isinstance(node.target, ast.Name):
                     var_name = node.target.id
-                    if len(var_name) == 1 and var_name != '_':
+                    if len(var_name) == 1 and var_name != "_":
                         violations.append((node.lineno, var_name))
                 elif isinstance(node.target, ast.Tuple):
                     # 如果是 for i, j in ... 的情况
                     for elt in node.target.elts:
                         if isinstance(elt, ast.Name):
                             var_name = elt.id
-                            if len(var_name) == 1 and var_name != '_':
+                            if len(var_name) == 1 and var_name != "_":
                                 violations.append((node.lineno, var_name))
 
         if violations:
             print(f"[{file_path}] 发现不合规的循环变量：")
             for lineno, var_name in violations:
-                print(f"  第 {lineno} 行：使用了无意义的单字母变量 '{var_name}'。建议更改为更具描述性的名称。")
+                print(
+                    f"  第 {lineno} 行：使用了无意义的单字母变量 '{var_name}'。建议更改为更具描述性的名称。"
+                )
             print()
             return len(violations)
         return 0
@@ -67,6 +70,7 @@ def check_file(file_path):
     except Exception as e:
         print(f"无法解析文件 {file_path}: {e}")
         return 0
+
 
 def main():
     if len(sys.argv) != 2:
@@ -81,10 +85,10 @@ def main():
     total_violations = 0
     for root, dirs, files in os.walk(target_dir):
         # 排除以 . 开头的隐藏目录
-        dirs[:] = [d for d in dirs if not d.startswith('.')]
-        
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
+
         for file in files:
-            if file.endswith('.py'):
+            if file.endswith(".py"):
                 file_path = os.path.join(root, file)
                 total_violations += check_file(file_path)
 
@@ -97,6 +101,7 @@ def main():
         print("2. **PR 规范**：创建 Pull Request 时，**PR 标题和描述必须使用中文**。")
         print("\n最后，请使用中文回答。")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

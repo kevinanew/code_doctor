@@ -67,7 +67,7 @@ def 执行归位检查(目标目录, verbose=False):
 
     # 1. 扫描目标目录，记录所有已经存在的 test_*.py 文件及其当前位置
     全局测试库 = {}
-    
+
     for 根路径, 目录, 文件名列表 in os.walk(目标目录):
         # 排除隐藏目录
         原来的目录 = list(目录)
@@ -110,7 +110,9 @@ def 执行归位检查(目标目录, verbose=False):
 
         # 过滤掉排除关键字目录
         原来的目录 = list(目录列表)
-        目录列表[:] = [目 for 目 in 目录列表 if not any(关键字 in 目 for 关键字 in 排除关键字)]
+        目录列表[:] = [
+            目 for 目 in 目录列表 if not any(关键字 in 目 for 关键字 in 排除关键字)
+        ]
         if verbose and len(原来的目录) != len(目录列表):
             已排除 = set(原来的目录) - set(目录列表)
             for 目录名 in 已排除:
@@ -125,7 +127,9 @@ def 执行归位检查(目标目录, verbose=False):
             # 如果本身就是 test_ 开头，且在目标目录内，通常是已对齐或待移动的目标，跳过对它的“归位检查”
             if 文件.startswith("test_"):
                 if verbose:
-                    print(f"    - 发现测试文件 (跳过归位检查): {os.path.join(根目录, 文件)}")
+                    print(
+                        f"    - 发现测试文件 (跳过归位检查): {os.path.join(根目录, 文件)}"
+                    )
                 continue
 
             源文件路径 = os.path.join(根目录, 文件)
@@ -152,7 +156,7 @@ def 执行归位检查(目标目录, verbose=False):
                     )
                 else:
                     if verbose:
-                        print(f"      [OK] 未发现对应测试文件，无需归位。")
+                        print("      [OK] 未发现对应测试文件，无需归位。")
             else:
                 if verbose:
                     print(f"      [OK] 测试文件已在理想位置: {理想测试路径}")
@@ -165,7 +169,7 @@ def 执行归位检查(目标目录, verbose=False):
     else:
         print(f"[归位检查]: 发现位置错误的测试文件 (目录: {目标目录})")
         print("\n[AI Agent 动作指引 (核心准则：严禁编写新测试)]:")
-        
+
         if 需要归位列表:
             print("【测试文件归位】：")
             for 归位项 in 需要归位列表:
@@ -186,12 +190,20 @@ def 执行归位检查(目标目录, verbose=False):
 
         print("\n【清理与特殊说明】：")
         print("1. **严禁修改源码**：绝对禁止修改任何 `.py` 源代码文件。")
-        print("2. **修改须说明原因**：若确实需要修改测试/配置文件内容，**必须在操作前明确告知原因**。")
-        print("3. **严禁使用 mv/rm**：必须使用 `git mv` 移动位置，禁止使用 `rm` 删除旧目录。")
-        print("4. **内容零改动**：应优先仅移动物理位置。通常不需要修改 `import`，尽量保持文件内容不变。")
+        print(
+            "2. **修改须说明原因**：若确实需要修改测试/配置文件内容，**必须在操作前明确告知原因**。"
+        )
+        print(
+            "3. **严禁使用 mv/rm**：必须使用 `git mv` 移动位置，禁止使用 `rm` 删除旧目录。"
+        )
+        print(
+            "4. **内容零改动**：应优先仅移动物理位置。通常不需要修改 `import`，尽量保持文件内容不变。"
+        )
         print("5. **无需清理空目录**：无需运行 `git clean`，空目录留在本地无碍。")
         print("6. **空的 __init__.py**：请直接忽略。")
-        print("7. **绝对禁止编写新测试**：若没有发现对应的历史测试文件，必须通过创建“占位文件”解决。严禁编写任何业务测试逻辑或 import 语句。")
+        print(
+            "7. **绝对禁止编写新测试**：若没有发现对应的历史测试文件，必须通过创建“占位文件”解决。严禁编写任何业务测试逻辑或 import 语句。"
+        )
         print("\n最后，请使用中文回答。")
 
         print(f"\n处理完毕后，请重新验证：`uv run 测试文件归位工具.py {目标目录}`")
@@ -202,6 +214,6 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="测试文件归位工具")
     parser.add_argument("目录", help="要整理的源代码目录")
     parser.add_argument("-v", "--verbose", action="store_true", help="显示详细检查详情")
-    
+
     args = parser.parse_args()
     执行归位检查(args.目录, args.verbose)

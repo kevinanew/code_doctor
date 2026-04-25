@@ -28,7 +28,6 @@
 
 from __future__ import annotations
 
-import os
 import re
 import sys
 from dataclasses import dataclass
@@ -77,12 +76,14 @@ def main() -> None:
     configs_path = target_dir / "src" / "configs.py"
     if not configs_path.is_file():
         # 如果文件不存在，视作检查通过（无此配置）
-        print(f"检查通过：未发现配置文件 {configs_path.relative_to(target_dir) if configs_path.is_relative_to(target_dir) else configs_path}。")
+        print(
+            f"检查通过：未发现配置文件 {configs_path.relative_to(target_dir) if configs_path.is_relative_to(target_dir) else configs_path}。"
+        )
         return
 
     configs_text = _read_text(configs_path)
     match = CLASS_DEVELOPMENT_RE.search(configs_text)
-    
+
     if not match:
         print("检查通过：未检测到 `class Development`，无需删除 Development 环境。")
         return

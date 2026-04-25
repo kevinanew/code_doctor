@@ -43,30 +43,36 @@ import subprocess
 # 优先级脚本列表（按顺序排列）
 PRIORITY_SCRIPTS = ["开发环境删除工具.py", "配置文件归位工具.py", "测试文件归位工具.py"]
 
+
 def ensure_git_environment(target_dir):
     """
     确保系统安装了 Git 且目标目录处于 Git 仓库中。
     """
     try:
         # 1. 检查 git 是否安装
-        subprocess.run(['git', '--version'], capture_output=True, check=True)
+        subprocess.run(["git", "--version"], capture_output=True, check=True)
     except (subprocess.CalledProcessError, FileNotFoundError):
-        print("[错误]: 未发现可用的 'git' 命令。请确保系统已安装 Git 并且已将其加入 PATH。")
+        print(
+            "[错误]: 未发现可用的 'git' 命令。请确保系统已安装 Git 并且已将其加入 PATH。"
+        )
         sys.exit(1)
 
     try:
         # 2. 检查目标目录是否处于 Git 仓库中
         result = subprocess.run(
-            ['git', '-C', target_dir, 'rev-parse', '--is-inside-work-tree'],
+            ["git", "-C", target_dir, "rev-parse", "--is-inside-work-tree"],
             capture_output=True,
-            text=True
+            text=True,
         )
         if result.returncode != 0 or "true" not in result.stdout.lower():
-            print(f"[错误]: 目录 '{target_dir}' 不是一个有效的 Git 仓库。全量检查工具必须在 Git 仓库内运行。")
+            print(
+                f"[错误]: 目录 '{target_dir}' 不是一个有效的 Git 仓库。全量检查工具必须在 Git 仓库内运行。"
+            )
             sys.exit(1)
     except Exception as e:
         print(f"[错误]: 校验 Git 仓库状态时发生异常: {e}")
         sys.exit(1)
+
 
 def find_check_scripts():
     """
@@ -74,28 +80,33 @@ def find_check_scripts():
     """
     current_dir = os.path.dirname(os.path.abspath(__file__))
     all_files = os.listdir(current_dir)
-    
+
     # 筛选出符合条件的脚本名
     check_files = [
-        f for f in all_files 
-        if f.endswith('.py') and not f.startswith('.') and not f.startswith('test_') and f != 'check.py'
+        f
+        for f in all_files
+        if f.endswith(".py")
+        and not f.startswith(".")
+        and not f.startswith("test_")
+        and f != "check.py"
     ]
-    
+
     # 按照优先级排序
     priority = []
     others = []
-    
+
     # 首先提取优先级脚本
     for p_script in PRIORITY_SCRIPTS:
         if p_script in check_files:
             priority.append(os.path.join(current_dir, p_script))
             check_files.remove(p_script)
-            
+
     # 其余脚本按字母顺序排序
     for other_script in sorted(check_files):
         others.append(os.path.join(current_dir, other_script))
-        
+
     return priority + others
+
 
 def is_git_modified(target_dir):
     """
@@ -103,11 +114,12 @@ def is_git_modified(target_dir):
     """
     # --porcelain 产生易于解析的输出，如果有变动则输出非空
     result = subprocess.run(
-        ['git', '-C', target_dir, 'status', '--porcelain'],
+        ["git", "-C", target_dir, "status", "--porcelain"],
         capture_output=True,
-        text=True
+        text=True,
     )
     return bool(result.stdout.strip())
+
 
 def main():
     # 参数解析：支持可选的目标目录，默认为当前目录
@@ -116,7 +128,7 @@ def main():
         sys.exit(1)
 
     target_dir = sys.argv[1] if len(sys.argv) == 2 else "."
-    
+
     # [核心校验]: 确保 Git 环境可用
     ensure_git_environment(target_dir)
 
@@ -130,52 +142,61 @@ def main():
         return
 
     print(f"=== 开始全量检查，目标目录: {os.path.abspath(target_dir)} ===\n")
-    
+
     results = []
     for script in scripts:
         script_name = os.path.basename(script)
         print(f"正在运行 {script_name}...")
-        
+
         try:
             # 运行脚本，将目标目录作为参数传递
             process = subprocess.run(
-                ['python3', script, target_dir],
-                capture_output=True,
-                text=True
+                ["python3", script, target_dir], capture_output=True, text=True
             )
-            
+
             print(process.stdout)
             if process.stderr:
                 print(f"错误输出:\n{process.stderr}")
-            
+
             if process.returncode != 0:
                 print(f"\n错误: {script_name} 检查失败，停止后续检查。")
                 print("-" * 40)
-                print("1. **提交并创建 PR**：请修复问题后在新的 Git 分支上提交代码并创建 PR。")
-                print("2. **PR 规范**：PR 标题和描述必须使用中文，严禁直接提交到 master 分支。")
-                print("3. **禁止本地重跑**：不要在本地重新运行 check.py，直接提交以触发 CI 检查。")
+                print(
+                    "1. **提交并创建 PR**：请修复问题后在新的 Git 分支上提交代码并创建 PR。"
+                )
+                print(
+                    "2. **PR 规范**：PR 标题和描述必须使用中文，严禁直接提交到 master 分支。"
+                )
+                print(
+                    "3. **禁止本地重跑**：不要在本地重新运行 check.py，直接提交以触发 CI 检查。"
+                )
                 print("最后，请使用中文回答。")
                 print("-" * 40)
                 sys.exit(1)
-            
+
             # 记录结果状态
             results.append((script_name, True))
-            
+
             # [核心逻辑]: 检查 Git 状态变动
             if is_git_modified(target_dir):
                 print("\n" + "!" * 40)
                 print("[警告]: 检测到本地文件已被修改或自动修复。")
                 print("-" * 40)
-                print("1. **提交并创建 PR**：修改完成后请在新的 Git 分支上提交代码并创建 PR。")
-                print("2. **PR 规范**：PR 标题和描述必须使用中文，严禁直接提交到 master 分支。")
-                print("3. **禁止本地重跑**：不要在本地继续运行 check.py，直接提交以触发 CI 检查。")
+                print(
+                    "1. **提交并创建 PR**：修改完成后请在新的 Git 分支上提交代码并创建 PR。"
+                )
+                print(
+                    "2. **PR 规范**：PR 标题和描述必须使用中文，严禁直接提交到 master 分支。"
+                )
+                print(
+                    "3. **禁止本地重跑**：不要在本地继续运行 check.py，直接提交以触发 CI 检查。"
+                )
                 print("最后，请使用中文回答。")
                 print("-" * 40)
                 sys.exit(1)
 
-
             print("-" * 40)
-            
+
         except Exception as e:
             print(f"运行脚本 {script_name} 时发生错误: {e}")
             sys.exit(1)
@@ -183,6 +204,7 @@ def main():
     if not all(success for _, success in results):
         print("\n注意：部分代码检查项未通过，请根据上述详细报告进行修改。")
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()
