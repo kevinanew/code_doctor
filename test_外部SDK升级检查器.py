@@ -41,6 +41,9 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
         path.write_text(content, encoding="utf-8")
         return path
 
+    def multi_line_content(self, prefix: str, lines: int) -> str:
+        return "\n".join(f"{prefix} {index}" for index in range(lines)) + "\n"
+
     def test_pick_main_file_prefers_same_named_py(self):
         sdk_dir = self.current_sdk_root / "app_user_flask"
         sdk_dir.mkdir()
@@ -78,18 +81,18 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
 
     def test_collect_sdk_statuses_filters_self_and_classifies(self):
         self.write_file(self.current_sdk_root, "sample_project/sample_project.py", "self = 1\n")
-        self.write_file(self.current_sdk_root, "need_update/need_update.py", "value = 1\n")
-        self.write_file(self.current_sdk_root, "already/already.py", "value = 2\n")
-        self.write_file(self.current_sdk_root, "room/room.py", "value = 99\n")
-        self.write_file(self.current_sdk_root, "room_v10/room_v10.py", "value = 98\n")
+        self.write_file(self.current_sdk_root, "need_update/need_update.py", self.multi_line_content("current", 8))
+        self.write_file(self.current_sdk_root, "already/already.py", self.multi_line_content("same", 3))
+        self.write_file(self.current_sdk_root, "room/room.py", self.multi_line_content("room current", 8))
+        self.write_file(self.current_sdk_root, "room_v10/room_v10.py", self.multi_line_content("room v10 current", 8))
         self.write_file(self.current_sdk_root, ".hidden/hidden.py", "skip = True\n")
         self.write_file(self.current_sdk_root, "__pycache__/cache.py", "skip = True\n")
         self.write_file(self.current_sdk_root, "unknown/unknown.py", "value = 3\n")
 
-        self.write_file(self.reference_sdk_root, "need_update/need_update.py", "value = 10\n")
-        self.write_file(self.reference_sdk_root, "already/already.py", "value = 2\n")
-        self.write_file(self.reference_sdk_root, "sample_project/sample_project.py", "value = 999\n")
-        self.write_file(self.reference_sdk_root, "room_sanic/room_sanic.py", "value = 100\n")
+        self.write_file(self.reference_sdk_root, "need_update/need_update.py", self.multi_line_content("reference", 8))
+        self.write_file(self.reference_sdk_root, "already/already.py", self.multi_line_content("same", 3))
+        self.write_file(self.reference_sdk_root, "sample_project/sample_project.py", self.multi_line_content("ref", 3))
+        self.write_file(self.reference_sdk_root, "room_sanic/room_sanic.py", self.multi_line_content("room reference", 8))
 
         with patch.object(self.module, "REFERENCE_SDK_ROOT", self.reference_sdk_root):
             up_to_date, outdated, unknown = self.module.collect_sdk_statuses(self.project_root)
@@ -200,10 +203,10 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
         self.assertNotIn("## 已排除的 SDK", buffer.getvalue())
 
     def test_main_returns_one_when_outdated_sdk_exists(self):
-        self.write_file(self.current_sdk_root, "other_sdk/other_sdk.py", "value = 1\n")
-        self.write_file(self.reference_sdk_root, "other_sdk/other_sdk.py", "value = 2\n")
-        self.write_file(self.current_sdk_root, "room/room.py", "value = 10\n")
-        self.write_file(self.reference_sdk_root, "room/room.py", "value = 10\n")
+        self.write_file(self.current_sdk_root, "other_sdk/other_sdk.py", self.multi_line_content("current", 8))
+        self.write_file(self.reference_sdk_root, "other_sdk/other_sdk.py", self.multi_line_content("reference", 8))
+        self.write_file(self.current_sdk_root, "room/room.py", self.multi_line_content("same", 3))
+        self.write_file(self.reference_sdk_root, "room_sanic/room_sanic.py", self.multi_line_content("same", 3))
 
         buffer = io.StringIO()
         with patch.object(self.module, "REFERENCE_SDK_ROOT", self.reference_sdk_root), patch.object(
@@ -216,8 +219,8 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
         self.assertNotIn("## 已排除的 SDK", buffer.getvalue())
 
     def test_main_returns_one_when_room_group_outdated_exists(self):
-        self.write_file(self.current_sdk_root, "room/room.py", "value = 1\n")
-        self.write_file(self.reference_sdk_root, "room_sanic/room_sanic.py", "value = 2\n")
+        self.write_file(self.current_sdk_root, "room/room.py", self.multi_line_content("current", 8))
+        self.write_file(self.reference_sdk_root, "room_sanic/room_sanic.py", self.multi_line_content("reference", 8))
 
         buffer = io.StringIO()
         with patch.object(self.module, "REFERENCE_SDK_ROOT", self.reference_sdk_root), patch.object(
@@ -230,10 +233,10 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
         self.assertIn("- room", buffer.getvalue())
 
     def test_main_prefers_non_group_sdk_over_room_group(self):
-        self.write_file(self.current_sdk_root, "room/room.py", "value = 1\n")
-        self.write_file(self.reference_sdk_root, "room_sanic/room_sanic.py", "value = 2\n")
-        self.write_file(self.current_sdk_root, "other_sdk/other_sdk.py", "value = 1\n")
-        self.write_file(self.reference_sdk_root, "other_sdk/other_sdk.py", "value = 2\n")
+        self.write_file(self.current_sdk_root, "room/room.py", self.multi_line_content("current", 8))
+        self.write_file(self.reference_sdk_root, "room_sanic/room_sanic.py", self.multi_line_content("reference", 8))
+        self.write_file(self.current_sdk_root, "other_sdk/other_sdk.py", self.multi_line_content("current", 8))
+        self.write_file(self.reference_sdk_root, "other_sdk/other_sdk.py", self.multi_line_content("reference", 8))
 
         buffer = io.StringIO()
         with patch.object(self.module, "REFERENCE_SDK_ROOT", self.reference_sdk_root), patch.object(
@@ -244,6 +247,18 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
         self.assertEqual(return_code, 1)
         self.assertNotIn("room 组升级检查结果", buffer.getvalue())
         self.assertIn("other_sdk", buffer.getvalue())
+
+    def test_count_diff_lines_treats_small_changes_as_no_upgrade(self):
+        current_text = self.multi_line_content("line", 5)
+        reference_text = self.multi_line_content("line", 5)
+
+        self.assertEqual(self.module.ExternalSDKUpgradeChecker.count_diff_lines(current_text, reference_text), 0)
+
+    def test_count_diff_lines_treats_large_changes_as_upgrade(self):
+        current_text = self.multi_line_content("current", 8)
+        reference_text = self.multi_line_content("reference", 8)
+
+        self.assertGreater(self.module.ExternalSDKUpgradeChecker.count_diff_lines(current_text, reference_text), 5)
 
 
 if __name__ == "__main__":
