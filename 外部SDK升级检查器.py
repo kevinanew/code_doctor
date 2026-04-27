@@ -10,10 +10,6 @@ from typing import Iterable
 
 REFERENCE_REPO_ROOT = Path("/home/coder/github/kevinanew/api_sdk")
 REFERENCE_SDK_ROOT = REFERENCE_REPO_ROOT / "python"
-REFERENCE_SDK_ALIASES: dict[str, str] = {
-    "room": "room_sanic",
-    "room_v10": "room_sanic",
-}
 
 IGNORED_SDK_NAMES = {"room_sanic"}
 
@@ -22,8 +18,10 @@ IGNORED_SDK_NAMES = {"room_sanic"}
 class SDKUpgradeGroup:
     group_name: str
     sdk_names: tuple[str, ...]
+    reference_sdk_name: str
     title: str
     overview_lines: tuple[str, ...]
+    migration_lines: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -48,21 +46,39 @@ SDK_UPGRADE_GROUPS: tuple[SDKUpgradeGroup, ...] = (
     SDKUpgradeGroup(
         group_name="room",
         sdk_names=("room", "room_v10"),
+        reference_sdk_name="room_sanic",
         title="room 组升级检查结果",
         overview_lines=(
             "- 本轮按 room 组处理，适用范围包含 room、room_v10，最终目标统一迁移到 room_sanic。",
             "- 即使当前项目只存在 room 组中的一个 SDK，也按本组提示词处理。",
             "- 本轮只处理本组命中的 SDK，不要把其他组的 SDK 混进来。",
         ),
+        migration_lines=(
+            "## room 组迁移要求",
+            "- `room` 与 `room_v10` 都是待淘汰旧 SDK，最终目标是删除它们并统一迁移到 `room_sanic`。",
+            "- 先搜索并替换当前项目中所有 `sdk.room`、`sdk.room_v10` 的导入、实例化和调用点。",
+            "- 对 `room_sanic` 已经提供的等价能力，直接替换到新实现；不要把旧 SDK 的兼容壳继续扩散到新代码里。",
+            "- 对 `room` 独有但 `room_sanic` 没有的接口，不要回填到 `room_sanic`，应先改造调用方或确认可以下线。",
+            "- 遇到 room 相关的异步调用时，先判断异步是否真的带来并发或非阻塞价值；如果只是同步 SDK 调用，优先直接调用同步方法，不要为了保持 `async` 形式而额外套 `await asyncio.to_thread` 或类似封装。",
+            "- 如果消费项目里还保留异步适配层，只允许放在消费项目内做薄封装，不要污染 `room_sanic` 本体。",
+        ),
     ),
     SDKUpgradeGroup(
         group_name="user_profile",
         sdk_names=("user_profile", "user_profile_flask", "user_profile_sanic"),
+        reference_sdk_name="user_profile_flask",
         title="user_profile 组升级检查结果",
         overview_lines=(
-            "- 本轮按 user_profile 组处理，适用范围包含 user_profile、user_profile_flask、user_profile_sanic。",
+            "- 本轮按 user_profile 组处理，适用范围包含 user_profile、user_profile_sanic，最终目标统一迁移到 user_profile_flask。",
             "- 即使当前项目只存在其中一个 SDK，也按本组提示词处理。",
             "- 本轮只处理本组命中的 SDK，不要把其他组的 SDK 混进来。",
+        ),
+        migration_lines=(
+            "## user_profile 组迁移要求",
+            "- `user_profile` 与 `user_profile_sanic` 都是待统一的旧形态，最终目标是收敛到 `user_profile_flask`。",
+            "- 先搜索并替换当前项目中所有 `sdk.user_profile`、`sdk.user_profile_sanic` 的导入、实例化和调用点。",
+            "- 对 `user_profile_flask` 已经提供的等价能力，直接替换到新实现；不要把旧 SDK 的兼容壳继续扩散到新代码里。",
+            "- 如果消费项目里还保留异步适配层，只允许放在消费项目内做薄封装，不要污染 `user_profile_flask` 本体。",
         ),
     ),
 )
@@ -71,23 +87,6 @@ SDK_UPGRADE_GROUPS: tuple[SDKUpgradeGroup, ...] = (
 class PromptLibrary:
     HEADER = "# 外部 SDK 升级检查结果"
     CHINESE_ONLY = "全程使用中文回答。"
-
-    ROOM_MIGRATION_LINES = (
-        "## room 组迁移要求",
-        "- `room` 与 `room_v10` 都是待淘汰旧 SDK，最终目标是删除它们并统一迁移到 `room_sanic`。",
-        "- 先搜索并替换当前项目中所有 `sdk.room`、`sdk.room_v10` 的导入、实例化和调用点。",
-        "- 对 `room_sanic` 已经提供的等价能力，直接替换到新实现；不要把旧 SDK 的兼容壳继续扩散到新代码里。",
-        "- 对 `room` 独有但 `room_sanic` 没有的接口，不要回填到 `room_sanic`，应先改造调用方或确认可以下线。",
-        "- 遇到 room 相关的异步调用时，先判断异步是否真的带来并发或非阻塞价值；如果只是同步 SDK 调用，优先直接调用同步方法，不要为了保持 `async` 形式而额外套 `await asyncio.to_thread` 或类似封装。",
-        "- 如果消费项目里还保留异步适配层，只允许放在消费项目内做薄封装，不要污染 `room_sanic` 本体。",
-        "",
-    )
-
-    COMMON_PROMPT_LINES = (
-        "## 当前项目信息",
-        "## 参考仓库信息",
-        "## 处理要求",
-    )
 
     @classmethod
     def build_in_progress_message(cls, dirty_paths: list[str]) -> str:
@@ -140,8 +139,8 @@ class PromptLibrary:
 
         if group is not None:
             lines.extend(["## 本轮分组说明", *group.overview_lines, ""])
-            if group.group_name == "room":
-                lines.extend(cls.ROOM_MIGRATION_LINES)
+            if group.migration_lines:
+                lines.extend([*group.migration_lines, ""])
 
         lines.extend(
             [
@@ -156,8 +155,8 @@ class PromptLibrary:
                 "## 参考仓库信息",
                 f"- 仓库根目录：{REFERENCE_REPO_ROOT}",
                 f"- Python SDK 根目录：{REFERENCE_SDK_ROOT}",
-                "- 参考仓库 SDK 的选择优先级：先 `_flask`，其次完全同名，最后 `_sanic`；脚本会先自行判断",
-                "- `room` 组的标准迁移目标是 `room_sanic`，不要再按同名旧壳理解 room 的升级任务",
+                f"- 当前分组的标准迁移目标：{group.reference_sdk_name if group is not None else '按普通 SDK 规则匹配'}",
+                "- 普通 SDK 的参考仓库选择优先级：先 `_flask`，其次完全同名，最后 `_sanic`；脚本会先自行判断",
                 "- `sdk_client.py` 必须放在当前项目 `src/sdk/` 根目录下，所有 SDK 共用，不要放进某个 SDK 子目录",
                 "",
                 "## 处理要求",
@@ -316,14 +315,26 @@ class ExternalSDKUpgradeChecker:
             sdk_dirs.append(child)
         return sorted(sdk_dirs, key=lambda path: path.name)
 
-    def resolve_reference_sdk_dir(self, sdk_name: str) -> Path | None:
-        base_name = REFERENCE_SDK_ALIASES.get(sdk_name, sdk_name)
-        for suffix in ("_flask", "_sanic"):
-            if base_name.endswith(suffix):
-                base_name = base_name[: -len(suffix)]
-                break
+    @staticmethod
+    def resolve_upgrade_group(sdk_name: str) -> SDKUpgradeGroup | None:
+        for group in SDK_UPGRADE_GROUPS:
+            if sdk_name in group.sdk_names:
+                return group
+        return None
 
-        candidate_names = (f"{base_name}_flask", base_name, f"{base_name}_sanic")
+    def resolve_reference_sdk_dir(self, sdk_name: str) -> Path | None:
+        group = self.resolve_upgrade_group(sdk_name)
+        if group is not None:
+            candidate_names = (group.reference_sdk_name,)
+        else:
+            base_name = sdk_name
+            for suffix in ("_flask", "_sanic"):
+                if base_name.endswith(suffix):
+                    base_name = base_name[: -len(suffix)]
+                    break
+
+            candidate_names = (f"{base_name}_flask", base_name, f"{base_name}_sanic")
+
         for candidate_name in candidate_names:
             candidate_dir = self.reference_sdk_root / candidate_name
             if candidate_dir.is_dir():

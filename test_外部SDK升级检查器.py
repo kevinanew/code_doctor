@@ -79,6 +79,14 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
                 resolved = self.module.resolve_reference_sdk_dir(self.reference_sdk_root, sdk_name)
                 self.assertEqual(resolved, self.reference_sdk_root / "room_sanic")
 
+    def test_resolve_reference_sdk_dir_maps_user_profile_sdks_to_user_profile_flask(self):
+        self.write_file(self.reference_sdk_root, "user_profile_flask/user_profile_flask.py", "value = 3\n")
+
+        for sdk_name in ("user_profile", "user_profile_sanic"):
+            with self.subTest(sdk_name=sdk_name):
+                resolved = self.module.resolve_reference_sdk_dir(self.reference_sdk_root, sdk_name)
+                self.assertEqual(resolved, self.reference_sdk_root / "user_profile_flask")
+
     def test_collect_sdk_statuses_filters_self_and_classifies(self):
         self.write_file(self.current_sdk_root, "sample_project/sample_project.py", "self = 1\n")
         self.write_file(self.current_sdk_root, "need_update/need_update.py", self.multi_line_content("current", 8))
@@ -141,6 +149,18 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
         self.assertEqual([item.sdk_name for item in selected], ["user_profile"])
         self.assertEqual(remaining, [])
 
+    def test_select_upgrade_batch_uses_user_profile_group_after_normal_sdks(self):
+        outdated = [
+            self.module.SDKStatus("other_sdk", Path("/a"), Path("/a/a.py"), Path("/b/a"), Path("/b/a.py"), "outdated"),
+            self.module.SDKStatus("user_profile_sanic", Path("/a"), Path("/a/b.py"), Path("/b/b"), Path("/b/b.py"), "outdated"),
+        ]
+
+        group, selected, remaining = self.module.select_upgrade_batch(outdated)
+
+        self.assertIsNone(group)
+        self.assertEqual([item.sdk_name for item in selected], ["other_sdk"])
+        self.assertEqual([item.sdk_name for item in remaining], ["user_profile_sanic"])
+
     def test_build_prompt_uses_group_specific_header(self):
         selected = [
             self.module.SDKStatus("sdk_a", Path("/a"), Path("/a/a.py"), Path("/b/a"), Path("/b/a.py"), "outdated"),
@@ -170,8 +190,26 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
         self.assertIn("本轮按 room 组处理", prompt)
         self.assertIn("room 组迁移要求", prompt)
         self.assertIn("统一迁移到 room_sanic", prompt)
-        self.assertIn("参考仓库 SDK 的选择优先级：先 `_flask`，其次完全同名，最后 `_sanic`", prompt)
+        self.assertIn("当前分组的标准迁移目标：room_sanic", prompt)
+        self.assertIn("普通 SDK 的参考仓库选择优先级：先 `_flask`，其次完全同名，最后 `_sanic`", prompt)
         self.assertIn("src/sdk/` 根目录下，所有 SDK 共用", prompt)
+
+    def test_build_prompt_uses_user_profile_group_specific_header(self):
+        selected = [
+            self.module.SDKStatus("user_profile_sanic", Path("/a"), Path("/a/a.py"), Path("/b/a"), Path("/b/a.py"), "outdated"),
+        ]
+
+        prompt = self.module.build_prompt(
+            self.project_root,
+            selected,
+            [],
+            total_outdated=1,
+            group=self.module.SDK_UPGRADE_GROUPS[1],
+        )
+
+        self.assertIn("user_profile 组升级检查结果", prompt)
+        self.assertIn("统一迁移到 user_profile_flask", prompt)
+        self.assertIn("当前分组的标准迁移目标：user_profile_flask", prompt)
 
     def test_main_blocks_when_dirty_sdk_changes_exist(self):
         self.write_file(self.current_sdk_root, "room/room.py", "value = 1\n")
@@ -199,7 +237,7 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
             return_code = self.module.main(["script", str(self.project_root)])
 
         self.assertEqual(return_code, 0)
-        self.assertIn("无需要升级的 SDK", buffer.getvalue())
+        self.assertIn("没有需要升级的 SDK", buffer.getvalue())
         self.assertNotIn("## 已排除的 SDK", buffer.getvalue())
 
     def test_main_returns_one_when_outdated_sdk_exists(self):
