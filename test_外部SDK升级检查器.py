@@ -91,6 +91,18 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
                 resolved = checker.resolve_reference_sdk_dir(sdk_name)
                 self.assertEqual(resolved, self.reference_sdk_root / "user_profile_flask")
 
+    def test_resolve_reference_repo_root_prefers_home_github_path(self):
+        home_root = self.workspace / "home"
+        api_sdk_root = home_root / "github" / "kevinanew" / "api_sdk"
+        self.write_file(api_sdk_root, "python/.keep", "")
+
+        with patch.object(self.module.Path, "home", return_value=home_root), patch.object(
+            self.module, "REFERENCE_REPO_CANDIDATES", (self.workspace / "missing_api_sdk", api_sdk_root)
+        ):
+            resolved = self.module.ExternalSDKUpgradeChecker.resolve_reference_repo_root()
+
+        self.assertEqual(resolved, api_sdk_root)
+
     def test_collect_sdk_statuses_filters_self_and_classifies(self):
         self.write_file(self.current_sdk_root, "sample_project/sample_project.py", "self = 1\n")
         self.write_file(self.current_sdk_root, "need_update/need_update.py", self.multi_line_content("current", 12))
@@ -106,7 +118,7 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
         self.write_file(self.reference_sdk_root, "sample_project/sample_project.py", self.multi_line_content("ref", 3))
         self.write_file(self.reference_sdk_root, "room_sanic/room_sanic.py", self.multi_line_content("room reference", 12))
 
-        with patch.object(self.module, "REFERENCE_SDK_ROOT", self.reference_sdk_root):
+        with patch.object(self.module.ExternalSDKUpgradeChecker, "resolve_reference_repo_root", return_value=self.reference_root):
             checker = self.module.ExternalSDKUpgradeChecker(self.project_root, self.module.REFERENCE_REPO_ROOT, self.reference_sdk_root)
             up_to_date, outdated, unknown = checker.collect_sdk_statuses()
 
@@ -228,7 +240,7 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
         self.write_file(self.reference_sdk_root, "room_sanic/room_sanic.py", "value = 10\n")
 
         buffer = io.StringIO()
-        with patch.object(self.module, "REFERENCE_SDK_ROOT", self.reference_sdk_root), patch.object(
+        with patch.object(self.module.ExternalSDKUpgradeChecker, "resolve_reference_repo_root", return_value=self.reference_root), patch.object(
             self.module.ExternalSDKUpgradeChecker, "collect_dirty_sdk_paths", return_value=[]
         ), patch.object(self.module.ExternalSDKUpgradeChecker, "update_reference_repo", return_value=True), redirect_stdout(buffer):
             return_code = self.module.main(["script", str(self.project_root)])
@@ -237,6 +249,15 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
         self.assertIn("无需要升级的 SDK", buffer.getvalue())
         self.assertNotIn("## 已排除的 SDK", buffer.getvalue())
 
+    def test_main_returns_zero_when_reference_repo_missing(self):
+        buffer = io.StringIO()
+        with patch.object(self.module.ExternalSDKUpgradeChecker, "resolve_reference_repo_root", return_value=None), redirect_stdout(buffer):
+            return_code = self.module.main(["script", str(self.project_root)])
+
+        self.assertEqual(return_code, 0)
+        self.assertIn("未找到 api_sdk 参考项目，跳过非本项目 SDK 升级检查。", buffer.getvalue())
+        self.assertNotIn("无需要升级的 SDK", buffer.getvalue())
+
     def test_main_returns_one_when_outdated_sdk_exists(self):
         self.write_file(self.current_sdk_root, "other_sdk/other_sdk.py", self.multi_line_content("current", 12))
         self.write_file(self.reference_sdk_root, "other_sdk/other_sdk.py", self.multi_line_content("reference", 12))
@@ -244,7 +265,7 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
         self.write_file(self.reference_sdk_root, "room_sanic/room_sanic.py", self.multi_line_content("same", 3))
 
         buffer = io.StringIO()
-        with patch.object(self.module, "REFERENCE_SDK_ROOT", self.reference_sdk_root), patch.object(
+        with patch.object(self.module.ExternalSDKUpgradeChecker, "resolve_reference_repo_root", return_value=self.reference_root), patch.object(
             self.module.ExternalSDKUpgradeChecker, "collect_dirty_sdk_paths", return_value=[]
         ), patch.object(self.module.ExternalSDKUpgradeChecker, "update_reference_repo", return_value=True), redirect_stdout(buffer):
             return_code = self.module.main(["script", str(self.project_root)])
@@ -258,7 +279,7 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
         self.write_file(self.reference_sdk_root, "room_sanic/room_sanic.py", self.multi_line_content("reference", 12))
 
         buffer = io.StringIO()
-        with patch.object(self.module, "REFERENCE_SDK_ROOT", self.reference_sdk_root), patch.object(
+        with patch.object(self.module.ExternalSDKUpgradeChecker, "resolve_reference_repo_root", return_value=self.reference_root), patch.object(
             self.module.ExternalSDKUpgradeChecker, "collect_dirty_sdk_paths", return_value=[]
         ), patch.object(self.module.ExternalSDKUpgradeChecker, "update_reference_repo", return_value=True), redirect_stdout(buffer):
             return_code = self.module.main(["script", str(self.project_root)])
@@ -274,7 +295,7 @@ class TestExternalSdkUpgradeChecker(unittest.TestCase):
         self.write_file(self.reference_sdk_root, "other_sdk/other_sdk.py", self.multi_line_content("reference", 12))
 
         buffer = io.StringIO()
-        with patch.object(self.module, "REFERENCE_SDK_ROOT", self.reference_sdk_root), patch.object(
+        with patch.object(self.module.ExternalSDKUpgradeChecker, "resolve_reference_repo_root", return_value=self.reference_root), patch.object(
             self.module.ExternalSDKUpgradeChecker, "collect_dirty_sdk_paths", return_value=[]
         ), patch.object(self.module.ExternalSDKUpgradeChecker, "update_reference_repo", return_value=True), redirect_stdout(buffer):
             return_code = self.module.main(["script", str(self.project_root)])
