@@ -56,6 +56,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 REFERENCE_REPO_ROOT = Path("/home/coder/github/kevinanew/api_sdk")
+REFERENCE_REPO_ROOT_HOME = Path.home() / "github" / "kevinanew" / "api_sdk"
+REFERENCE_REPO_CANDIDATES = (REFERENCE_REPO_ROOT, REFERENCE_REPO_ROOT_HOME)
 REFERENCE_SDK_ROOT = REFERENCE_REPO_ROOT / "python"
 IGNORED_SDK_NAMES = {"room_sanic"}
 
@@ -205,7 +207,7 @@ class PromptLibrary:
             "- 保持文件结构与命名一致，不要修改这些 SDK 之外的内容。",
             "- 优化 SDK 调用点时尽量内敛修改，减少无意义中间变量的使用。",
             "- SDK 异常处理必须使用 sdk_client.py 中的 SDKException，严禁使用 sdk/exception.py。",
-            "- 如果你在参考仓库中找不到 `api_sdk` 项目，或者找不到对应 SDK，请返回错误码 `1` 退出。",
+            "- 如果你找不到对应 SDK，请返回错误码 `1` 退出。",
             "- 升级完成后严禁重复运行此脚本。直接激活 code_quality_checker skill 进行代码质量检查。",
         ]
         if omitted:
@@ -233,6 +235,19 @@ class ExternalSDKUpgradeChecker:
         self.target_dir = target_dir
         self.reference_repo_root = reference_repo_root
         self.reference_sdk_root = reference_sdk_root
+
+    @staticmethod
+    def resolve_reference_repo_root() -> Path | None:
+        for candidate in REFERENCE_REPO_CANDIDATES:
+            if candidate.is_dir() and (candidate / "python").is_dir():
+                return candidate
+        github_root = Path.home() / "github"
+        if not github_root.is_dir():
+            return None
+        for candidate in sorted(path for path in github_root.rglob("api_sdk") if path.is_dir()):
+            if (candidate / "python").is_dir():
+                return candidate
+        return None
 
     @staticmethod
     def resolve_target_dir(raw_target: str | None) -> Path | None:
@@ -353,6 +368,9 @@ class ExternalSDKUpgradeChecker:
         return None, outdated[:3], outdated[3:]
 
     def run(self) -> int:
+        if not self.reference_repo_root.is_dir():
+            print("未找到 api_sdk 参考项目，跳过非本项目 SDK 升级检查。")
+            return 0
         dirty = self.collect_dirty_sdk_paths()
         if dirty:
             print(PromptLibrary.render_in_progress(dirty))
@@ -376,7 +394,11 @@ def main(argv: list[str] | None = None) -> int:
     if target_dir is None:
         print(f"错误: '{args[0] if args else '.'}' 不是一个有效的目录。")
         return 1
-    return ExternalSDKUpgradeChecker(target_dir, REFERENCE_REPO_ROOT, REFERENCE_SDK_ROOT).run()
+    reference_repo_root = ExternalSDKUpgradeChecker.resolve_reference_repo_root()
+    if reference_repo_root is None:
+        print("未找到 api_sdk 参考项目，跳过非本项目 SDK 升级检查。")
+        return 0
+    return ExternalSDKUpgradeChecker(target_dir, reference_repo_root, reference_repo_root / "python").run()
 
 
 if __name__ == "__main__":
