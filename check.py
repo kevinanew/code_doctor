@@ -20,9 +20,9 @@
     - **按顺序运行**：优先运行 `开发环境删除工具.py`，然后是 `配置文件归位工具.py`，接着是 `测试文件归位工具.py`，其余工具按字母顺序运行。
     - 启动时校验 Git 环境，失败则立即退出。
     - **PR 规范**：创建 Pull Request 时，**PR 标题和描述必须使用中文**。
-    - **快速失败**：如果任何检查脚本运行失败（返回非零退出码），立即停止执行后续脚本并引导 AI Agent 在新分支提交代码并直接创建 PR（**PR 标题和描述必须使用中文**）。
+    - **快速失败**：如果任何检查脚本运行失败（返回非零退出码），立即停止执行后续脚本并引导 AI Agent 在新分支提交代码并直接创建 PR（**PR 标题和描述必须使用中文，且不要做任何优化**）。
     - 在每个脚本运行结束后，立即检查 Git 状态。
-    - **变更中断**：如果发现文件变动，必须立即停止后续检查，并引导 AI Agent 在新分支提交代码并直接创建 PR（**PR 标题和描述必须使用中文**），且不再进行本地检查。
+    - **变更中断**：如果发现文件变动，必须立即停止后续检查，并引导 AI Agent 在新分支提交代码并直接创建 PR（**PR 标题和描述必须使用中文，且不要做任何优化**），且不再进行本地检查。
 - **结果输出**：打印每个检查工具的运行结果，全部完成后显示汇总统计信息。
 
 ## 3. 命令行接口
@@ -121,6 +121,25 @@ def is_git_modified(target_dir):
     return bool(result.stdout.strip())
 
 
+def exit_with_instructions(header_msg):
+    """
+    打印引导 AI Agent 提交 PR 的标准化指令并退出。
+    """
+    print(header_msg)
+    print("-" * 40)
+    print(
+        "1. **提交并创建 PR**：修改或修复完成后，请在新的 Git 分支上提交代码并创建 PR。"
+    )
+    print("2. **PR 规范**：PR 标题和描述必须使用中文，严禁直接提交到 master 分支。")
+    print(
+        "3. **禁止本地重跑**：不要在本地重新或继续运行 check.py，直接提交以触发 CI 检查。"
+    )
+    print("4. **不要做任何优化**：只做我上面交代的事情。")
+    print("最后，请使用中文回答。")
+    print("-" * 40)
+    sys.exit(1)
+
+
 def main():
     # 参数解析：支持可选的目标目录，默认为当前目录
     if len(sys.argv) > 2:
@@ -159,41 +178,19 @@ def main():
                 print(f"错误输出:\n{process.stderr}")
 
             if process.returncode != 0:
-                print(f"\n错误: {script_name} 检查失败，停止后续检查。")
-                print("-" * 40)
-                print(
-                    "1. **提交并创建 PR**：请修复问题后在新的 Git 分支上提交代码并创建 PR。"
+                exit_with_instructions(
+                    f"\n错误: {script_name} 检查失败，停止后续检查。"
                 )
-                print(
-                    "2. **PR 规范**：PR 标题和描述必须使用中文，严禁直接提交到 master 分支。"
-                )
-                print(
-                    "3. **禁止本地重跑**：不要在本地重新运行 check.py，直接提交以触发 CI 检查。"
-                )
-                print("最后，请使用中文回答。")
-                print("-" * 40)
-                sys.exit(1)
 
             # 记录结果状态
             results.append((script_name, True))
 
             # [核心逻辑]: 检查 Git 状态变动
             if is_git_modified(target_dir):
-                print("\n" + "!" * 40)
-                print("[警告]: 检测到本地文件已被修改或自动修复。")
-                print("-" * 40)
-                print(
-                    "1. **提交并创建 PR**：修改完成后请在新的 Git 分支上提交代码并创建 PR。"
+                header = (
+                    "\n" + "!" * 40 + "\n[警告]: 检测到本地文件已被修改或自动修复。"
                 )
-                print(
-                    "2. **PR 规范**：PR 标题和描述必须使用中文，严禁直接提交到 master 分支。"
-                )
-                print(
-                    "3. **禁止本地重跑**：不要在本地继续运行 check.py，直接提交以触发 CI 检查。"
-                )
-                print("最后，请使用中文回答。")
-                print("-" * 40)
-                sys.exit(1)
+                exit_with_instructions(header)
 
             print("-" * 40)
 
