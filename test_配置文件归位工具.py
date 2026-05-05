@@ -35,7 +35,30 @@ class TestConfigFileAlignment(unittest.TestCase):
 
         stdout, returncode = self.run_check(".")
         self.assertIn("[配置归位]: 发现位置错误的配置文件", stdout)
-        self.assertIn("**必须使用 `git mv`** 将其向上移动一层", stdout)
+        self.assertIn(
+            "**必须使用 `git mv`** 将其移动到 '.' (移除路径中的测试目录关键字)", stdout
+        )
+        self.assertEqual(returncode, 1)
+
+    def test_nested_misplaced_conftest(self):
+        # 场景：conftest.py 位于嵌套的 unittests 路径中
+        # 目标：src/unittests/extensions/flask_api/conftest.py -> src/extensions/flask_api/conftest.py
+        nested_dir = os.path.join(
+            self.root_dir, "src", "unittests", "extensions", "flask_api"
+        )
+        os.makedirs(nested_dir)
+        conftest_path = os.path.join(nested_dir, "conftest.py")
+        with open(conftest_path, "w") as f:
+            f.write("# pytest config")
+
+        stdout, returncode = self.run_check(".")
+        self.assertIn("[配置归位]: 发现位置错误的配置文件", stdout)
+        # 验证建议的目标目录是否正确移除了 unittests
+        # 注意：由于输入是 "."，输出会带有 "./" 前缀
+        expected_target = os.path.join(".", "src", "extensions", "flask_api")
+        self.assertIn(
+            f"将其移动到 '{expected_target}' (移除路径中的测试目录关键字)", stdout
+        )
         self.assertEqual(returncode, 1)
 
     def test_aligned_conftest(self):
