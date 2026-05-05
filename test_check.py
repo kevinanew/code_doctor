@@ -18,9 +18,9 @@ class TestCheck(unittest.TestCase):
             ["git", "config", "user.email", "test@example.com"], cwd=self.test_dir
         )
         subprocess.run(["git", "config", "user.name", "Test User"], cwd=self.test_dir)
-        # 创建 .gitignore 忽略 check.log
+        # 创建 .gitignore 忽略 check*.log
         with open(os.path.join(self.test_dir, ".gitignore"), "w") as f:
-            f.write("check.log\n")
+            f.write("check*.log\n")
 
     def tearDown(self):
         # 删除临时目录
@@ -69,9 +69,12 @@ class TestCheck(unittest.TestCase):
             result.returncode, 0, f"check.py 运行失败: {result.stdout}\n{result.stderr}"
         )
 
-        # 3. 验证 check.log
-        log_path = os.path.join(self.test_dir, "check.log")
-        self.assertTrue(os.path.exists(log_path), "check.log 未创建")
+        # 3. 验证 check.*.log
+        import glob
+
+        log_files = glob.glob(os.path.join(self.test_dir, "check.*.log"))
+        self.assertTrue(len(log_files) > 0, "check.*.log 未创建")
+        log_path = log_files[0]
 
         with open(log_path, "r", encoding="utf-8") as f:
             log_content = f.read()

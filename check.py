@@ -6,7 +6,7 @@
 # 脚本具体 PRD: 全量代码检查工具 (Full Check Tool)
 ...
 ## 1. 目标
-提供一个统一的入口点，通过 shell 调用自动运行当前目录下所有的代码检查脚本。这简化了执行流程，让用户可以通过一个命令运行所有检查项。同时，所有输出将被同步记录到 `check.log` 文件中。
+提供一个统一的入口点，通过 shell 调用自动运行当前目录下所有的代码检查脚本。这简化了执行流程，让用户可以通过一个命令运行所有检查项。同时，所有输出将被同步记录到带有时间戳的 `check.YYYYMMDD-HHMMSS.log` 文件中。
 
 ## 2. 检查规则
 - **检测对象**：当前目录（脚本所在目录）下的所有 `.py` 文件。
@@ -18,14 +18,14 @@
     - **必须在仓库内运行**：目标路径或其父级必须是一个有效的 Git 仓库。
 - **执行逻辑**：
     - **参数解析**：支持 0 或 1 个参数。如果没有提供参数，默认检查当前目录。
-    - **日志记录**：启动时自动在当前目录创建或清空 `check.log`，并将所有控制台输出同步写入该文件。
+    - **日志记录**：启动时自动在当前目录创建 `check.YYYYMMDD-HHMMSS.log`，并将所有控制台输出同步写入该文件。
     - **按顺序运行**：按照脚本内硬编码的 `ALL_SCRIPTS` 列表顺序执行所有检查工具。
     - 启动时校验 Git 环境，失败则立即退出。
     - **PR 规范**：创建 Pull Request 时，**PR 标题和描述必须使用中文**。
     - **快速失败**：如果任何检查脚本运行失败（返回非零退出码），立即停止执行后续脚本并引导 AI Agent 在新分支提交代码并使用 gh pr create 命令创建 PR（**PR 标题和描述必须使用 中文，且不要做任何优化**；若遇 EOF 错误请一直尝试，直到成功为止）。
     - 在每个脚本运行结束后，立即检查 Git 状态。
     - **变更中断**：如果发现文件变动，必须立即停止后续检查，告知用户变动的文件清单，并引导 AI Agent 在新分支提交代码并使用 gh pr create 命令创建 PR（**PR 标题和描述必须使用 中文，且不要做任何优化**；若遇 EOF 错误请一直尝试，直到成功为止），且不再进行本地检查。
-    - **结果输出**：打印每个检查工具的运行结果，全部完成后显示汇总统计信息。所有输出均会记录在 `check.log`。
+    - **结果输出**：打印每个检查工具的运行结果，全部完成后显示汇总统计信息。所有输出均会记录在生成的日志文件中。
 
     ## 3. 命令行接口
     - **用法**：`python check.py [target_directory]`
@@ -36,13 +36,14 @@
     - 明确定义所有检查工具及其运行顺序。
     - 顺序运行并显示每个工具的完整输出。
     - 中断机制确保自动修复引发的变动能及时被发现，并规范 Agent 的提交行为。
-    - `check.log` 完整记录本次运行的所有日志。
+    - 完整记录本次运行的所有日志。
 
 """
 
 import os
 import sys
 import subprocess
+from datetime import datetime
 
 
 class Tee(object):
@@ -167,7 +168,9 @@ def main():
 
     # 设置日志重定向 (当前工作目录下)
     script_dir = os.path.dirname(os.path.abspath(__file__))
-    log_path = os.path.join(os.getcwd(), "check.log")
+    timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+    log_filename = f"check.{timestamp}.log"
+    log_path = os.path.join(os.getcwd(), log_filename)
     sys.stdout = Tee(log_path, "w")
     sys.stderr = sys.stdout
 
