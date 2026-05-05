@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import unittest
 import subprocess
 import os
@@ -35,6 +37,7 @@ class TestConfigFileAlignment(unittest.TestCase):
 
         stdout, returncode = self.run_check(".")
         self.assertIn("[配置归位]: 发现位置错误的配置文件", stdout)
+        self.assertIn("不要添加任何的新文件，只能移动文件！", stdout)
         self.assertIn(
             "**必须使用 `git mv`** 将其移动到 '.' (移除路径中的测试目录关键字)", stdout
         )

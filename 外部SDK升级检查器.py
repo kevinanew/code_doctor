@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 """外部 SDK 升级检查器。
 
 用法:
@@ -154,7 +156,11 @@ class PromptLibrary:
             "当前正在升级SDK，请将未保存修改合并后再进行下一步SDK升级。",
         ]
         if dirty_paths:
-            lines += ["", "## 未保存修改区中的 SDK 改动", *[f"- {p}" for p in dirty_paths]]
+            lines += [
+                "",
+                "## 未保存修改区中的 SDK 改动",
+                *[f"- {p}" for p in dirty_paths],
+            ]
         lines += [
             "",
             "## 处理要求",
@@ -166,7 +172,11 @@ class PromptLibrary:
     def render_no_upgrade(unknown: list[SDKStatus]) -> str:
         lines = ["无需要升级的 SDK"]
         if unknown:
-            lines += ["", "## 无法判断的 SDK", *[f"- {s.sdk_name}：{s.reason}" for s in unknown]]
+            lines += [
+                "",
+                "## 无法判断的 SDK",
+                *[f"- {s.sdk_name}：{s.reason}" for s in unknown],
+            ]
         return "\n".join(lines)
 
     @staticmethod
@@ -178,7 +188,10 @@ class PromptLibrary:
         group: SDKUpgradeGroup | None = None,
     ) -> str:
         omitted = max(total_outdated - len(selected), 0)
-        lines = [f"{PromptLibrary.HEADER}{f' - {group.title}' if group else ''}", "全程使用中文回答。"]
+        lines = [
+            f"{PromptLibrary.HEADER}{f' - {group.title}' if group else ''}",
+            "全程使用中文回答。",
+        ]
         if group:
             lines += ["## 本轮分组说明", *group.overview.splitlines()]
             if group.migration:
@@ -211,9 +224,17 @@ class PromptLibrary:
             "- 升级完成后严禁重复运行此脚本。直接激活 code_quality_checker skill 进行代码质量检查。",
         ]
         if omitted:
-            lines += ["", "## 本轮未纳入的未升级 SDK", f"- 其余 {omitted} 个未升级 SDK 留待下一轮处理。"]
+            lines += [
+                "",
+                "## 本轮未纳入的未升级 SDK",
+                f"- 其余 {omitted} 个未升级 SDK 留待下一轮处理。",
+            ]
         if unknown:
-            lines += ["", "## 无法判断的 SDK", *[f"- {s.sdk_name}：{s.reason}" for s in unknown]]
+            lines += [
+                "",
+                "## 无法判断的 SDK",
+                *[f"- {s.sdk_name}：{s.reason}" for s in unknown],
+            ]
         return "\n".join(lines)
 
 
@@ -231,7 +252,9 @@ class ExternalSDKUpgradeChecker:
     所有后续的新增专属组、阈值调整、提示词变化，都应优先从这里的流程入口理解。
     """
 
-    def __init__(self, target_dir: Path, reference_repo_root: Path, reference_sdk_root: Path) -> None:
+    def __init__(
+        self, target_dir: Path, reference_repo_root: Path, reference_sdk_root: Path
+    ) -> None:
         self.target_dir = target_dir
         self.reference_repo_root = reference_repo_root
         self.reference_sdk_root = reference_sdk_root
@@ -244,7 +267,9 @@ class ExternalSDKUpgradeChecker:
         github_root = Path.home() / "github"
         if not github_root.is_dir():
             return None
-        for candidate in sorted(path for path in github_root.rglob("api_sdk") if path.is_dir()):
+        for candidate in sorted(
+            path for path in github_root.rglob("api_sdk") if path.is_dir()
+        ):
             if (candidate / "python").is_dir():
                 return candidate
         return None
@@ -274,19 +299,39 @@ class ExternalSDKUpgradeChecker:
 
     @staticmethod
     def diff_lines(current_text: str, reference_text: str) -> int:
-        matcher = difflib.SequenceMatcher(None, current_text.splitlines(), reference_text.splitlines())
-        return sum(max(i2 - i1, j2 - j1) for tag, i1, i2, j1, j2 in matcher.get_opcodes() if tag != "equal")
+        matcher = difflib.SequenceMatcher(
+            None, current_text.splitlines(), reference_text.splitlines()
+        )
+        return sum(
+            max(i2 - i1, j2 - j1)
+            for tag, i1, i2, j1, j2 in matcher.get_opcodes()
+            if tag != "equal"
+        )
 
     @staticmethod
     def resolve_upgrade_group(sdk_name: str) -> SDKUpgradeGroup | None:
-        return next((group for group in SDK_UPGRADE_GROUPS if sdk_name in group.sdk_names), None)
+        return next(
+            (group for group in SDK_UPGRADE_GROUPS if sdk_name in group.sdk_names), None
+        )
 
     def update_reference_repo(self) -> bool:
         if not self.reference_repo_root.is_dir():
             return False
-        for command in (["git", "fetch", "origin"], ["git", "checkout", "master"], ["git", "reset", "--hard", "origin/master"]):
+        for command in (
+            ["git", "fetch", "origin"],
+            ["git", "checkout", "master"],
+            ["git", "reset", "--hard", "origin/master"],
+        ):
             try:
-                if subprocess.run(command, cwd=self.reference_repo_root, capture_output=True, text=True).returncode != 0:
+                if (
+                    subprocess.run(
+                        command,
+                        cwd=self.reference_repo_root,
+                        capture_output=True,
+                        text=True,
+                    ).returncode
+                    != 0
+                ):
                     return False
             except OSError:
                 return False
@@ -295,7 +340,14 @@ class ExternalSDKUpgradeChecker:
     def collect_dirty_sdk_paths(self) -> list[str]:
         try:
             completed = subprocess.run(
-                ["git", "status", "--porcelain", "--untracked-files=normal", "--", "src/sdk"],
+                [
+                    "git",
+                    "status",
+                    "--porcelain",
+                    "--untracked-files=normal",
+                    "--",
+                    "src/sdk",
+                ],
                 cwd=self.target_dir,
                 capture_output=True,
                 text=True,
@@ -310,7 +362,9 @@ class ExternalSDKUpgradeChecker:
             if not path_part:
                 continue
             candidates = [item.strip() for item in path_part.split("->")]
-            if any(item.startswith("src/sdk/") or item == "src/sdk" for item in candidates):
+            if any(
+                item.startswith("src/sdk/") or item == "src/sdk" for item in candidates
+            ):
                 dirty.append(candidates[-1])
         return dirty
 
@@ -321,7 +375,11 @@ class ExternalSDKUpgradeChecker:
         return sorted(
             child
             for child in sdk_root.iterdir()
-            if child.is_dir() and not child.name.startswith(".") and child.name != "__pycache__" and child.name != self.target_dir.name and child.name not in IGNORED_SDK_NAMES
+            if child.is_dir()
+            and not child.name.startswith(".")
+            and child.name != "__pycache__"
+            and child.name != self.target_dir.name
+            and child.name not in IGNORED_SDK_NAMES
         )
 
     def resolve_reference_sdk_dir(self, sdk_name: str) -> Path | None:
@@ -335,36 +393,101 @@ class ExternalSDKUpgradeChecker:
                     base_name = base_name[: -len(suffix)]
                     break
             candidate_names = (f"{base_name}_flask", base_name, f"{base_name}_sanic")
-        return next((self.reference_sdk_root / name for name in candidate_names if (self.reference_sdk_root / name).is_dir()), None)
+        return next(
+            (
+                self.reference_sdk_root / name
+                for name in candidate_names
+                if (self.reference_sdk_root / name).is_dir()
+            ),
+            None,
+        )
 
     def classify_sdk(self, sdk_dir: Path) -> SDKStatus:
         current_main = self.pick_main_file(sdk_dir)
         reference_sdk_dir = self.resolve_reference_sdk_dir(sdk_dir.name)
         reference_main = self.pick_main_file(reference_sdk_dir)
         if current_main is None:
-            return SDKStatus(sdk_dir.name, sdk_dir, None, reference_sdk_dir, reference_main, "unknown", "当前项目主文件缺失")
+            return SDKStatus(
+                sdk_dir.name,
+                sdk_dir,
+                None,
+                reference_sdk_dir,
+                reference_main,
+                "unknown",
+                "当前项目主文件缺失",
+            )
         if reference_main is None:
-            return SDKStatus(sdk_dir.name, sdk_dir, current_main, reference_sdk_dir, None, "unknown", "参考仓库中按专属组或 _flask / 同名 / _sanic 优先级未找到对应 SDK")
-        current_text, reference_text = self.read_text(current_main), self.read_text(reference_main)
+            return SDKStatus(
+                sdk_dir.name,
+                sdk_dir,
+                current_main,
+                reference_sdk_dir,
+                None,
+                "unknown",
+                "参考仓库中按专属组或 _flask / 同名 / _sanic 优先级未找到对应 SDK",
+            )
+        current_text, reference_text = (
+            self.read_text(current_main),
+            self.read_text(reference_main),
+        )
         if current_text is None or reference_text is None:
-            return SDKStatus(sdk_dir.name, sdk_dir, current_main, reference_sdk_dir, reference_main, "unknown", "主文件读取失败")
+            return SDKStatus(
+                sdk_dir.name,
+                sdk_dir,
+                current_main,
+                reference_sdk_dir,
+                reference_main,
+                "unknown",
+                "主文件读取失败",
+            )
         if self.diff_lines(current_text, reference_text) <= 10:
-            return SDKStatus(sdk_dir.name, sdk_dir, current_main, reference_sdk_dir, reference_main, "up_to_date")
-        return SDKStatus(sdk_dir.name, sdk_dir, current_main, reference_sdk_dir, reference_main, "outdated", "主文件内容存在差异")
+            return SDKStatus(
+                sdk_dir.name,
+                sdk_dir,
+                current_main,
+                reference_sdk_dir,
+                reference_main,
+                "up_to_date",
+            )
+        return SDKStatus(
+            sdk_dir.name,
+            sdk_dir,
+            current_main,
+            reference_sdk_dir,
+            reference_main,
+            "outdated",
+            "主文件内容存在差异",
+        )
 
-    def collect_sdk_statuses(self) -> tuple[list[SDKStatus], list[SDKStatus], list[SDKStatus]]:
+    def collect_sdk_statuses(
+        self,
+    ) -> tuple[list[SDKStatus], list[SDKStatus], list[SDKStatus]]:
         results = [self.classify_sdk(sdk_dir) for sdk_dir in self.iter_sdk_dirs()]
-        return ([r for r in results if r.status == "up_to_date"], [r for r in results if r.status == "outdated"], [r for r in results if r.status == "unknown"])
+        return (
+            [r for r in results if r.status == "up_to_date"],
+            [r for r in results if r.status == "outdated"],
+            [r for r in results if r.status == "unknown"],
+        )
 
-    def select_upgrade_batch(self, outdated: list[SDKStatus]) -> tuple[SDKUpgradeGroup | None, list[SDKStatus], list[SDKStatus]]:
+    def select_upgrade_batch(
+        self, outdated: list[SDKStatus]
+    ) -> tuple[SDKUpgradeGroup | None, list[SDKStatus], list[SDKStatus]]:
         grouped = {name for group in SDK_UPGRADE_GROUPS for name in group.sdk_names}
         non_group = [item for item in outdated if item.sdk_name not in grouped]
         if non_group:
-            return None, non_group[:3], non_group[3:] + [item for item in outdated if item.sdk_name in grouped]
+            return (
+                None,
+                non_group[:3],
+                non_group[3:] + [item for item in outdated if item.sdk_name in grouped],
+            )
         for group in SDK_UPGRADE_GROUPS:
             selected = [item for item in outdated if item.sdk_name in group.sdk_names]
             if selected:
-                return group, selected, [item for item in outdated if item.sdk_name not in group.sdk_names]
+                return (
+                    group,
+                    selected,
+                    [item for item in outdated if item.sdk_name not in group.sdk_names],
+                )
         return None, outdated[:3], outdated[3:]
 
     def run(self) -> int:
@@ -381,7 +504,11 @@ class ExternalSDKUpgradeChecker:
             print(PromptLibrary.render_no_upgrade(unknown))
             return 0
         group, selected, _ = self.select_upgrade_batch(outdated)
-        print(PromptLibrary.render_prompt(self.target_dir, selected, unknown, len(outdated), group))
+        print(
+            PromptLibrary.render_prompt(
+                self.target_dir, selected, unknown, len(outdated), group
+            )
+        )
         return 1
 
 
@@ -398,7 +525,9 @@ def main(argv: list[str] | None = None) -> int:
     if reference_repo_root is None:
         print("未找到 api_sdk 参考项目，跳过非本项目 SDK 升级检查。")
         return 0
-    return ExternalSDKUpgradeChecker(target_dir, reference_repo_root, reference_repo_root / "python").run()
+    return ExternalSDKUpgradeChecker(
+        target_dir, reference_repo_root, reference_repo_root / "python"
+    ).run()
 
 
 if __name__ == "__main__":

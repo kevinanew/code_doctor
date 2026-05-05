@@ -17,16 +17,22 @@ Code Doctor 是一个纯 Python 实现的代码质量检查工具集，旨在确
 
 ### 运行单个检查
 
-所有的工具都通过以下方式调用：
+所有的工具都可以直接运行或通过 `uv run` 调用：
 
 ```bash
-python <脚本名>.py <目标目录>
+./<脚本名>.py <目标目录>
+```
+
+或者：
+
+```bash
+uv run <脚本名>.py <目标目录>
 ```
 
 例如，运行 `循环变量命名检查.py`：
 
 ```bash
-python 循环变量命名检查.py /path/to/your/project
+./循环变量命名检查.py /path/to/your/project
 ```
 
 ### 运行所有检查
@@ -34,7 +40,7 @@ python 循环变量命名检查.py /path/to/your/project
 可以使用 `check.py` 自动发现并运行当前目录下的所有检查脚本：
 
 ```bash
-python check.py /path/to/your/project
+./check.py /path/to/your/project
 ```
 
 ## 开发规范
@@ -45,3 +51,4 @@ python check.py /path/to/your/project
 4. **排除隐藏目录**：所有脚本在递归检查目录时，必须跳过以点（.）开头的隐藏目录（如 .git, .venv, .vscode 等）。
 5. **自动化测试**：每一个脚本都必须配备相应的测试脚本，测试脚本命名规范为 `test_<脚本名>.py`。
 6. **中文命名**：所有脚本的文件名（包括测试脚本）必须使用中文，以便直观描述功能。
+7. **可执行性**：每一个脚本都必须包含 `#!/usr/bin/env python3` 的 shebang 行，并且具有可执行权限。
