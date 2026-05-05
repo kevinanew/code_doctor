@@ -208,7 +208,6 @@ def 执行归位检查(目标目录, verbose=False):
         )
         print("\n最后，请使用中文回答。")
 
-        print(f"\n处理完毕后，请重新验证：`uv run 测试文件归位工具.py {目标目录}`")
         sys.exit(1)
 
 
