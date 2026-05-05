@@ -156,9 +156,7 @@ def exit_with_instructions(header_msg):
     print(
         "1. **提交并创建 PR**：修改或修复完成后，请在新的 Git 分支上提交代码，并使用以下命令创建 PR："
     )
-    print(
-        '   `gh pr create --title "fix: 归位配置文件以维持 fixture 作用域" --body "详见 check.log"`'
-    )
+    print('   `gh pr create --title "XXXXX" --body "XXXXX"`')
     print("   **注意**：如果遇到 EOF 错误，请尝试最多 3 次直至成功。")
     print("2. **PR 规范**：PR 标题和描述必须使用中文，严禁直接提交到 master 分支。")
     print(
