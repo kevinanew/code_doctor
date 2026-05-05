@@ -166,11 +166,11 @@ def main():
     # [核心校验]: 确保 Git 环境可用
     ensure_git_environment(target_dir)
 
-    # 设置日志重定向 (当前工作目录下)
+    # 设置日志重定向 (脚本所在目录下)
     script_dir = os.path.dirname(os.path.abspath(__file__))
     timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
     log_filename = f"check.{timestamp}.log"
-    log_path = os.path.join(os.getcwd(), log_filename)
+    log_path = os.path.join(script_dir, log_filename)
     sys.stdout = Tee(log_path, "w")
     sys.stderr = sys.stdout
 
