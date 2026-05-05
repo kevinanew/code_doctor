@@ -22,9 +22,9 @@
     - **按顺序运行**：优先运行 `开发环境删除工具.py`，然后是 `配置文件归位工具.py`，接着是 `测试文件归位工具.py`，其余工具按字母顺序运行。
     - 启动时校验 Git 环境，失败则立即退出。
     - **PR 规范**：创建 Pull Request 时，**PR 标题和描述必须使用中文**。
-    - **快速失败**：如果任何检查脚本运行失败（返回非零退出码），立即停止执行后续脚本并引导 AI Agent 在新分支提交代码并使用 gh pr create 命令创建 PR（**PR 标题和描述必须使用中文，且不要做任何优化**；若遇 EOF 错误请尝试最多 3 次）。
+    - **快速失败**：如果任何检查脚本运行失败（返回非零退出码），立即停止执行后续脚本并引导 AI Agent 在新分支提交代码并使用 gh pr create 命令创建 PR（**PR 标题和描述必须使用中文，且不要做任何优化**；若遇 EOF 错误请一直尝试，直到成功为止）。
     - 在每个脚本运行结束后，立即检查 Git 状态。
-    - **变更中断**：如果发现文件变动，必须立即停止后续检查，并引导 AI Agent 在新分支提交代码并使用 gh pr create 命令创建 PR（**PR 标题和描述必须使用中文，且不要做任何优化**；若遇 EOF 错误请尝试最多 3 次），且不再进行本地检查。
+    - **变更中断**：如果发现文件变动，必须立即停止后续检查，告知用户变动的文件清单，并引导 AI Agent 在新分支提交代码并使用 gh pr create 命令创建 PR（**PR 标题和描述必须使用中文，且不要做任何优化**；若遇 EOF 错误请一直尝试，直到成功为止），且不再进行本地检查。
 - **结果输出**：打印每个检查工具的运行结果，全部完成后显示汇总统计信息。所有输出均会记录在 `check.log`。
 
 ## 3. 命令行接口
@@ -135,9 +135,9 @@ def find_check_scripts():
     return priority + others
 
 
-def is_git_modified(target_dir):
+def get_git_changes(target_dir):
     """
-    检查 Git 工作区是否有变动（已修改或已暂存的文件）。
+    获取 Git 工作区的变动状态（已修改或已暂存的文件）。
     """
     # --porcelain 产生易于解析的输出，如果有变动则输出非空
     result = subprocess.run(
@@ -145,7 +145,7 @@ def is_git_modified(target_dir):
         capture_output=True,
         text=True,
     )
-    return bool(result.stdout.strip())
+    return result.stdout.strip()
 
 
 def exit_with_instructions(header_msg):
@@ -158,7 +158,7 @@ def exit_with_instructions(header_msg):
         "1. **提交并创建 PR**：修改或修复完成后，请在新的 Git 分支上提交代码，并使用以下命令创建 PR："
     )
     print('   `gh pr create --title "XXXXX" --body "XXXXX"`')
-    print("   **注意**：如果遇到 EOF 错误，请尝试最多 3 次直至成功。")
+    print("   **注意**：如果遇到 EOF 错误，请一直尝试，直到成功为止。")
     print("2. **PR 规范**：PR 标题和描述必须使用中文，严禁直接提交到 master 分支。")
     print(
         "3. **禁止本地重跑**：不要在本地重新或继续运行 check.py，直接提交以触发 CI 检查。"
@@ -221,10 +221,12 @@ def main():
             results.append((script_name, True))
 
             # [核心逻辑]: 检查 Git 状态变动
-            if is_git_modified(target_dir):
+            changes = get_git_changes(target_dir)
+            if changes:
                 header = (
                     "\n" + "!" * 40 + "\n[警告]: 检测到本地文件已被修改或自动修复。"
                 )
+                header += f"\n变动文件清单:\n{changes}"
                 exit_with_instructions(header)
 
             print("-" * 40)
