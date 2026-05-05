@@ -69,7 +69,7 @@ class Tee(object):
 
 # 优先级脚本列表（按顺序排列）
 PRIORITY_SCRIPTS = [
-    "禁止Mock检查工具.py",
+    "before_pr_check/禁止Mock检查工具.py",
     "开发环境删除工具.py",
     "配置文件归位工具.py",
     "测试文件归位工具.py",
@@ -111,17 +111,23 @@ def find_check_scripts():
     寻找当前目录下所有的检查脚本，并按优先级排序。
     """
     current_dir = os.path.dirname(os.path.abspath(__file__))
-    all_files = os.listdir(current_dir)
+    check_files = []
 
-    # 筛选出符合条件的脚本名
-    check_files = [
-        f
-        for f in all_files
-        if f.endswith(".py")
-        and not f.startswith(".")
-        and not f.startswith("test_")
-        and f != "check.py"
-    ]
+    for root, dirs, files in os.walk(current_dir):
+        # 排除隐藏目录
+        dirs[:] = [d for d in dirs if not d.startswith(".")]
+
+        for f in files:
+            if (
+                f.endswith(".py")
+                and not f.startswith(".")
+                and not f.startswith("test_")
+                and f != "check.py"
+            ):
+                # 获取相对于 current_dir 的路径
+                full_path = os.path.join(root, f)
+                rel_path = os.path.relpath(full_path, current_dir)
+                check_files.append(rel_path)
 
     # 按照优先级排序
     priority = []
