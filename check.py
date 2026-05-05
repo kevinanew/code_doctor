@@ -5,7 +5,7 @@
 # 脚本具体 PRD: 全量代码检查工具 (Full Check Tool)
 ...
 ## 1. 目标
-提供一个统一的入口点，通过 shell 调用自动运行当前目录下所有的代码检查脚本。这简化了执行流程，让用户可以通过一个命令运行所有检查项。
+提供一个统一的入口点，通过 shell 调用自动运行当前目录下所有的代码检查脚本。这简化了执行流程，让用户可以通过一个命令运行所有检查项。同时，所有输出将被同步记录到 `check.log` 文件中。
 
 ## 2. 检查规则
 - **检测对象**：当前目录（脚本所在目录）下的所有 `.py` 文件。
@@ -17,13 +17,14 @@
     - **必须在仓库内运行**：目标路径或其父级必须是一个有效的 Git 仓库。
 - **执行逻辑**：
     - **参数解析**：支持 0 或 1 个参数。如果没有提供参数，默认检查当前目录。
+    - **日志记录**：启动时自动在当前目录创建或清空 `check.log`，并将所有控制台输出同步写入该文件。
     - **按顺序运行**：优先运行 `开发环境删除工具.py`，然后是 `配置文件归位工具.py`，接着是 `测试文件归位工具.py`，其余工具按字母顺序运行。
     - 启动时校验 Git 环境，失败则立即退出。
     - **PR 规范**：创建 Pull Request 时，**PR 标题和描述必须使用中文**。
     - **快速失败**：如果任何检查脚本运行失败（返回非零退出码），立即停止执行后续脚本并引导 AI Agent 在新分支提交代码并直接创建 PR（**PR 标题和描述必须使用中文，且不要做任何优化**）。
     - 在每个脚本运行结束后，立即检查 Git 状态。
     - **变更中断**：如果发现文件变动，必须立即停止后续检查，并引导 AI Agent 在新分支提交代码并直接创建 PR（**PR 标题和描述必须使用中文，且不要做任何优化**），且不再进行本地检查。
-- **结果输出**：打印每个检查工具的运行结果，全部完成后显示汇总统计信息。
+- **结果输出**：打印每个检查工具的运行结果，全部完成后显示汇总统计信息。所有输出均会记录在 `check.log`。
 
 ## 3. 命令行接口
 - **用法**：`python check.py [target_directory]`
@@ -34,11 +35,36 @@
 - 自动发现所有检查工具并按优先级排序执行。
 - 顺序运行并显示每个工具的完整输出。
 - 中断机制确保自动修复引发的变动能及时被发现，并规范 Agent 的提交行为。
+- `check.log` 完整记录本次运行的所有日志。
 """
 
 import os
 import sys
 import subprocess
+
+
+class Tee(object):
+    """
+    将输出同时重定向到控制台和文件。
+    """
+
+    def __init__(self, name, mode):
+        self.file = open(name, mode, encoding="utf-8")
+        self.stdout = sys.stdout
+
+    def __del__(self):
+        if hasattr(self, "file"):
+            self.file.close()
+
+    def write(self, data):
+        self.file.write(data)
+        self.stdout.write(data)
+        self.file.flush()
+
+    def flush(self):
+        self.file.flush()
+        self.stdout.flush()
+
 
 # 优先级脚本列表（按顺序排列）
 PRIORITY_SCRIPTS = ["开发环境删除工具.py", "配置文件归位工具.py", "测试文件归位工具.py"]
@@ -150,6 +176,10 @@ def main():
 
     # [核心校验]: 确保 Git 环境可用
     ensure_git_environment(target_dir)
+
+    # 设置日志重定向
+    sys.stdout = Tee("check.log", "w")
+    sys.stderr = sys.stdout
 
     if not os.path.isdir(target_dir):
         print(f"错误: '{target_dir}' 不是一个有效的目录。")
