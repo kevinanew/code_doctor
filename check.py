@@ -19,24 +19,25 @@
 - **执行逻辑**：
     - **参数解析**：支持 0 或 1 个参数。如果没有提供参数，默认检查当前目录。
     - **日志记录**：启动时自动在当前目录创建或清空 `check.log`，并将所有控制台输出同步写入该文件。
-    - **按顺序运行**：优先运行 `禁止Mock检查工具.py`，然后是 `开发环境删除工具.py`，接着是 `配置文件归位工具.py`，最后是 `测试文件归位工具.py`，其余工具按字母顺序运行。
+    - **按顺序运行**：按照脚本内硬编码的 `ALL_SCRIPTS` 列表顺序执行所有检查工具。
     - 启动时校验 Git 环境，失败则立即退出。
     - **PR 规范**：创建 Pull Request 时，**PR 标题和描述必须使用中文**。
-    - **快速失败**：如果任何检查脚本运行失败（返回非零退出码），立即停止执行后续脚本并引导 AI Agent 在新分支提交代码并使用 gh pr create 命令创建 PR（**PR 标题和描述必须使用中文，且不要做任何优化**；若遇 EOF 错误请一直尝试，直到成功为止）。
+    - **快速失败**：如果任何检查脚本运行失败（返回非零退出码），立即停止执行后续脚本并引导 AI Agent 在新分支提交代码并使用 gh pr create 命令创建 PR（**PR 标题和描述必须使用 中文，且不要做任何优化**；若遇 EOF 错误请一直尝试，直到成功为止）。
     - 在每个脚本运行结束后，立即检查 Git 状态。
-    - **变更中断**：如果发现文件变动，必须立即停止后续检查，告知用户变动的文件清单，并引导 AI Agent 在新分支提交代码并使用 gh pr create 命令创建 PR（**PR 标题和描述必须使用中文，且不要做任何优化**；若遇 EOF 错误请一直尝试，直到成功为止），且不再进行本地检查。
-- **结果输出**：打印每个检查工具的运行结果，全部完成后显示汇总统计信息。所有输出均会记录在 `check.log`。
+    - **变更中断**：如果发现文件变动，必须立即停止后续检查，告知用户变动的文件清单，并引导 AI Agent 在新分支提交代码并使用 gh pr create 命令创建 PR（**PR 标题和描述必须使用 中文，且不要做任何优化**；若遇 EOF 错误请一直尝试，直到成功为止），且不再进行本地检查。
+    - **结果输出**：打印每个检查工具的运行结果，全部完成后显示汇总统计信息。所有输出均会记录在 `check.log`。
 
-## 3. 命令行接口
-- **用法**：`python check.py [target_directory]`
-- **参数**：`[target_directory]` 是需要递归检查的目录路径（可选，默认为当前目录 `.`）。
+    ## 3. 命令行接口
+    - **用法**：`python check.py [target_directory]`
+    - **参数**：`[target_directory]` 是需要递归检查的目录路径（可选，默认为当前目录 `.`）。
 
-## 4. 预期效果
+    ## 4. 预期效果
 
-- 自动发现所有检查工具并按优先级排序执行。
-- 顺序运行并显示每个工具的完整输出。
-- 中断机制确保自动修复引发的变动能及时被发现，并规范 Agent 的提交行为。
-- `check.log` 完整记录本次运行的所有日志。
+    - 明确定义所有检查工具及其运行顺序。
+    - 顺序运行并显示每个工具的完整输出。
+    - 中断机制确保自动修复引发的变动能及时被发现，并规范 Agent 的提交行为。
+    - `check.log` 完整记录本次运行的所有日志。
+
 """
 
 import os
@@ -67,12 +68,16 @@ class Tee(object):
         self.stdout.flush()
 
 
-# 优先级脚本列表（按顺序排列）
-PRIORITY_SCRIPTS = [
+# 所有检查脚本列表（按顺序排列）
+ALL_SCRIPTS = [
     "before_pr_check/禁止Mock检查工具.py",
     "开发环境删除工具.py",
     "配置文件归位工具.py",
     "测试文件归位工具.py",
+    "Python镜像版本检查工具.py",
+    "外部SDK升级检查器.py",
+    "嵌套循环检查.py",
+    "循环变量命名检查.py",
 ]
 
 
@@ -104,46 +109,6 @@ def ensure_git_environment(target_dir):
     except Exception as e:
         print(f"[错误]: 校验 Git 仓库状态时发生异常: {e}")
         sys.exit(1)
-
-
-def find_check_scripts():
-    """
-    寻找当前目录下所有的检查脚本，并按优先级排序。
-    """
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    check_files = []
-
-    for root, dirs, files in os.walk(current_dir):
-        # 排除隐藏目录
-        dirs[:] = [d for d in dirs if not d.startswith(".")]
-
-        for filename in files:
-            if (
-                filename.endswith(".py")
-                and not filename.startswith(".")
-                and not filename.startswith("test_")
-                and filename != "check.py"
-            ):
-                # 获取相对于 current_dir 的路径
-                full_path = os.path.join(root, filename)
-                rel_path = os.path.relpath(full_path, current_dir)
-                check_files.append(rel_path)
-
-    # 按照优先级排序
-    priority = []
-    others = []
-
-    # 首先提取优先级脚本
-    for p_script in PRIORITY_SCRIPTS:
-        if p_script in check_files:
-            priority.append(os.path.join(current_dir, p_script))
-            check_files.remove(p_script)
-
-    # 其余脚本按字母顺序排序
-    for other_script in sorted(check_files):
-        others.append(os.path.join(current_dir, other_script))
-
-    return priority + others
 
 
 def get_git_changes(target_dir):
@@ -210,22 +175,25 @@ def main():
         print(f"错误: '{target_dir}' 不是一个有效的目录。")
         sys.exit(1)
 
-    scripts = find_check_scripts()
-    if not scripts:
-        print("未发现可用的检查脚本。")
-        return
-
     print(f"=== 开始全量检查，目标目录: {os.path.abspath(target_dir)} ===\n")
 
     results = []
-    for script in scripts:
-        script_name = os.path.basename(script)
+    for rel_path in ALL_SCRIPTS:
+        script_full_path = os.path.join(script_dir, rel_path)
+        script_name = os.path.basename(rel_path)
+
+        if not os.path.exists(script_full_path):
+            print(f"[警告]: 脚本 {rel_path} 未找到，跳过。")
+            continue
+
         print(f"正在运行 {script_name}...")
 
         try:
             # 运行脚本，将目标目录作为参数传递
             process = subprocess.run(
-                ["python3", script, target_dir], capture_output=True, text=True
+                ["python3", script_full_path, target_dir],
+                capture_output=True,
+                text=True,
             )
 
             print(process.stdout)

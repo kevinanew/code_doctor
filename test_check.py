@@ -2,6 +2,7 @@
 import unittest
 import subprocess
 import os
+import sys
 import shutil
 import tempfile
 
@@ -27,31 +28,25 @@ class TestCheck(unittest.TestCase):
 
     def test_run_check_flow(self):
         """
-        测试 check.py 的完整流程：寻找脚本、按顺序运行、生成日志。
+        测试 check.py 的完整流程：按顺序运行 ALL_SCRIPTS、生成日志。
         """
-        # 1. 准备环境：复制 check.py 并创建一些假脚本
+        # 1. 准备环境：复制 check.py 并创建 ALL_SCRIPTS 中的脚本
         script_dir = os.path.dirname(os.path.abspath(__file__))
         shutil.copy(os.path.join(script_dir, "check.py"), self.test_dir)
 
-        # 创建优先级脚本
-        priority_scripts = [
-            "开发环境删除工具.py",
-            "配置文件归位工具.py",
-            "测试文件归位工具.py",
-        ]
-        for script_name in priority_scripts:
-            with open(os.path.join(self.test_dir, script_name), "w") as f:
-                f.write(
-                    "import sys\nprint('Running " + script_name + "')\nsys.exit(0)\n"
-                )
+        # 动态导入 ALL_SCRIPTS
+        sys.path.insert(0, self.test_dir)
+        import check
 
-        # 创建普通脚本
-        other_scripts = ["B_script.py", "A_script.py"]
-        for script_name in other_scripts:
-            with open(os.path.join(self.test_dir, script_name), "w") as f:
-                f.write(
-                    "import sys\nprint('Running " + script_name + "')\nsys.exit(0)\n"
-                )
+        all_scripts = check.ALL_SCRIPTS
+        sys.path.pop(0)
+
+        for rel_path in all_scripts:
+            full_path = os.path.join(self.test_dir, rel_path)
+            os.makedirs(os.path.dirname(full_path), exist_ok=True)
+            script_name = os.path.basename(rel_path)
+            with open(full_path, "w") as f:
+                f.write(f"import sys\nprint('Running {script_name}')\nsys.exit(0)\n")
 
         # 提交所有内容以确保 git 状态干净
         subprocess.run(["git", "add", "."], cwd=self.test_dir, capture_output=True)
@@ -62,7 +57,6 @@ class TestCheck(unittest.TestCase):
         )
 
         # 2. 运行 check.py
-        # 注意：要在 test_dir 运行，且 check.py 就在 test_dir
         result = subprocess.run(
             ["python3", "check.py", "."],
             capture_output=True,
@@ -86,19 +80,16 @@ class TestCheck(unittest.TestCase):
         self.assertIn("=== 开始全量检查，目标目录:", log_content)
 
         # 验证运行顺序
-        # 优先级脚本
-        self.assertIn("正在运行 开发环境删除工具.py...", log_content)
-        self.assertIn("正在运行 配置文件归位工具.py...", log_content)
-        self.assertIn("正在运行 测试文件归位工具.py...", log_content)
-
-        # 普通脚本按字母顺序 (A_script 应该在 B_script 前)
-        self.assertIn("正在运行 A_script.py...", log_content)
-        self.assertIn("正在运行 B_script.py...", log_content)
-
-        # 验证 A_script 在 B_script 之前的顺序
-        a_index = log_content.find("正在运行 A_script.py...")
-        b_index = log_content.find("正在运行 B_script.py...")
-        self.assertTrue(a_index < b_index, "普通脚本应按字母顺序运行")
+        last_index = -1
+        for rel_path in all_scripts:
+            script_name = os.path.basename(rel_path)
+            search_str = f"正在运行 {script_name}..."
+            self.assertIn(search_str, log_content)
+            current_index = log_content.find(search_str)
+            self.assertTrue(
+                current_index > last_index, f"脚本 {script_name} 运行顺序错误"
+            )
+            last_index = current_index
 
         # 验证分隔符
         self.assertIn("-" * 40, log_content)
