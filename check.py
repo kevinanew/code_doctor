@@ -117,15 +117,15 @@ def find_check_scripts():
         # 排除隐藏目录
         dirs[:] = [d for d in dirs if not d.startswith(".")]
 
-        for f in files:
+        for filename in files:
             if (
-                f.endswith(".py")
-                and not f.startswith(".")
-                and not f.startswith("test_")
-                and f != "check.py"
+                filename.endswith(".py")
+                and not filename.startswith(".")
+                and not filename.startswith("test_")
+                and filename != "check.py"
             ):
                 # 获取相对于 current_dir 的路径
-                full_path = os.path.join(root, f)
+                full_path = os.path.join(root, filename)
                 rel_path = os.path.relpath(full_path, current_dir)
                 check_files.append(rel_path)
 
@@ -159,16 +159,25 @@ def get_git_changes(target_dir):
     return result.stdout.strip()
 
 
-def exit_with_instructions(header_msg):
+def exit_with_instructions(header_msg, script_name=None):
     """
     打印引导 AI Agent 提交 PR 的标准化指令并退出。
     """
     print(header_msg)
     print("-" * 40)
+
+    # 如果有脚本名，提供更具描述性的 PR 标题和描述
+    pr_title = f"修复 {script_name} 发现的问题" if script_name else "修复代码规范问题"
+    pr_body = (
+        f"根据 {script_name} 的检查结果进行了自动修复或调整。"
+        if script_name
+        else "根据代码检查工具的结果进行了修复。"
+    )
+
     print(
         "1. **提交并创建 PR**：修改或修复完成后，请在新的 Git 分支上提交代码，并使用以下命令创建 PR："
     )
-    print('   `gh pr create --title "XXXXX" --body "XXXXX"`')
+    print(f'   `gh pr create --title "{pr_title}" --body "{pr_body}"`')
     print("   **注意**：如果遇到 EOF 错误，请一直尝试，直到成功为止。")
     print("2. **PR 规范**：PR 标题和描述必须使用中文，严禁直接提交到 master 分支。")
     print(
@@ -225,7 +234,8 @@ def main():
 
             if process.returncode != 0:
                 exit_with_instructions(
-                    f"\n错误: {script_name} 检查失败，停止后续检查。"
+                    f"\n错误: {script_name} 检查失败，停止后续检查。",
+                    script_name=script_name,
                 )
 
             # 记录结果状态
@@ -238,7 +248,7 @@ def main():
                     "\n" + "!" * 40 + "\n[警告]: 检测到本地文件已被修改或自动修复。"
                 )
                 header += f"\n变动文件清单:\n{changes}"
-                exit_with_instructions(header)
+                exit_with_instructions(header, script_name=script_name)
 
             print("-" * 40)
 

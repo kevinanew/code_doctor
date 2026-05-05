@@ -39,15 +39,19 @@ class TestCheck(unittest.TestCase):
             "配置文件归位工具.py",
             "测试文件归位工具.py",
         ]
-        for s in priority_scripts:
-            with open(os.path.join(self.test_dir, s), "w") as f:
-                f.write("import sys\nprint('Running " + s + "')\nsys.exit(0)\n")
+        for script_name in priority_scripts:
+            with open(os.path.join(self.test_dir, script_name), "w") as f:
+                f.write(
+                    "import sys\nprint('Running " + script_name + "')\nsys.exit(0)\n"
+                )
 
         # 创建普通脚本
         other_scripts = ["B_script.py", "A_script.py"]
-        for s in other_scripts:
-            with open(os.path.join(self.test_dir, s), "w") as f:
-                f.write("import sys\nprint('Running " + s + "')\nsys.exit(0)\n")
+        for script_name in other_scripts:
+            with open(os.path.join(self.test_dir, script_name), "w") as f:
+                f.write(
+                    "import sys\nprint('Running " + script_name + "')\nsys.exit(0)\n"
+                )
 
         # 提交所有内容以确保 git 状态干净
         subprocess.run(["git", "add", "."], cwd=self.test_dir, capture_output=True)
