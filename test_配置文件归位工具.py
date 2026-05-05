@@ -39,7 +39,8 @@ class TestConfigFileAlignment(unittest.TestCase):
         self.assertIn("[配置归位]: 发现位置错误的配置文件", stdout)
         self.assertIn("不要添加任何的新文件，只能移动文件！", stdout)
         self.assertIn(
-            "**必须使用 `git mv`** 将其移动到 '.' (移除路径中的测试目录关键字)", stdout
+            f"**必须使用 `git mv`** 将其移动到 '{os.path.join('.', 'conftest.py')}' (移除路径中的测试目录关键字)",
+            stdout,
         )
         self.assertEqual(returncode, 1)
 
@@ -56,9 +57,11 @@ class TestConfigFileAlignment(unittest.TestCase):
 
         stdout, returncode = self.run_check(".")
         self.assertIn("[配置归位]: 发现位置错误的配置文件", stdout)
-        # 验证建议的目标目录是否正确移除了 unittests
+        # 验证建议的目标路径是否正确移除了 unittests 并包含了文件名
         # 注意：由于输入是 "."，输出会带有 "./" 前缀
-        expected_target = os.path.join(".", "src", "extensions", "flask_api")
+        expected_target = os.path.join(
+            ".", "src", "extensions", "flask_api", "conftest.py"
+        )
         self.assertIn(
             f"将其移动到 '{expected_target}' (移除路径中的测试目录关键字)", stdout
         )
